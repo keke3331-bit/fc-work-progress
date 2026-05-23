@@ -49,6 +49,12 @@ function formatDeadline(iso) {
   const pad = n => String(n).padStart(2, '0');
   return `${d.getMonth()+1}/${d.getDate()}(${['日','月','火','水','木','金','土'][d.getDay()]}) ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
+function formatCompletedAt(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 // ─── Device badge ─────────────────────────────────────────────────────────────
 function deviceBadge(device) {
@@ -238,9 +244,14 @@ function openDetail(id) {
     <li class="${item.checked ? 'checked' : ''}" id="cli-${idx}">
       <input type="checkbox" ${item.checked ? 'checked' : ''}
         onchange="toggleCheck('${id}', ${idx}, this.checked)">
-      <div>
+      <div style="flex:1;min-width:0">
         <div class="checklist-name">${escHtml(item.name)}</div>
         ${renderDetailForModal(item.detail, item, idx, id)}
+      </div>
+      <div class="checklist-action">
+        ${item.checked
+          ? `<span class="completed-time">✅ ${formatCompletedAt(item.completedAt)}</span>`
+          : `<button class="btn-complete" onclick="completeItem('${id}',${idx})">完了</button>`}
       </div>
     </li>`).join('');
 
@@ -259,11 +270,29 @@ function openDetail(id) {
 function toggleCheck(id, idx, checked) {
   const o = orders.find(x => x.id === id);
   if (!o || !o.checklist[idx]) return;
-  o.checklist[idx].checked = checked;
-  const li = document.getElementById(`cli-${idx}`);
-  if (li) li.className = checked ? 'checked' : '';
+  const item = o.checklist[idx];
+  item.checked = checked;
+  if (checked) {
+    if (!item.completedAt) item.completedAt = new Date().toISOString();
+    if (o.checklist.every(c => c.checked)) o.status = 'done';
+  } else {
+    item.completedAt = null;
+  }
   saveOrders(orders);
-  renderStats();
+  render();
+  openDetail(id);
+}
+
+function completeItem(orderId, idx) {
+  const o = orders.find(x => x.id === orderId);
+  if (!o || !o.checklist[idx]) return;
+  const item = o.checklist[idx];
+  item.checked = true;
+  item.completedAt = new Date().toISOString();
+  if (o.checklist.every(c => c.checked)) o.status = 'done';
+  saveOrders(orders);
+  render();
+  openDetail(orderId);
 }
 
 function closeDetail() {

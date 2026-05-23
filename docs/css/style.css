@@ -254,8 +254,29 @@ tbody td { padding: 13px 16px; font-size: 14px; vertical-align: middle; }
 }
 .checklist li.checked { background: #f0fdf4; }
 .checklist li input[type="checkbox"] { margin-top: 2px; accent-color: var(--primary); flex-shrink: 0; }
-.checklist-name { font-weight: 600; flex-shrink: 0; min-width: 160px; }
+.checklist-name { font-weight: 600; }
 .checklist-detail { color: var(--text-muted); font-size: 12px; }
+.checklist-action { flex-shrink: 0; display: flex; align-items: center; margin-left: auto; padding-left: 10px; }
+.btn-complete {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  transition: background .12s;
+}
+.btn-complete:hover { background: var(--primary-dark); }
+.completed-time {
+  font-size: 11px;
+  color: var(--success);
+  font-weight: 700;
+  white-space: nowrap;
+}
 
 .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
 .btn-primary {
