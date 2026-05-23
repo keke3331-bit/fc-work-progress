@@ -47,6 +47,18 @@ body {
   gap: 10px;
 }
 .header-title span { font-size: 22px; }
+.btn-manual {
+  font-size: 12px; font-weight: 700;
+  color: rgba(255,255,255,0.85);
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.35);
+  border-radius: 6px;
+  padding: 4px 10px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.btn-manual:hover { background: rgba(255,255,255,0.28); color: #fff; }
 .sync-status {
   font-size: 12px;
   font-weight: 600;
