@@ -126,13 +126,18 @@ function updateMinuteOptions(hour) {
 buildTimeOptions();
 
 // ─── Render dashboard ────────────────────────────────────────────────────────
+function needsNotification(o) {
+  return o.requiresNotification && !o.completionNotified;
+}
+
 function filteredOrders() {
   return orders
     .filter(o => {
+      if (filterStatus === 'notify') return needsNotification(o);
       if (filterStatus !== 'all' && o.status !== filterStatus) return false;
       if (filterDevice !== 'all' && o.device !== filterDevice) return false;
       if (searchText && !o.customerName.includes(searchText) &&
-          !o.staff.includes(searchText) && !o.requester.includes(searchText)) return false;
+          !(o.staff||'').includes(searchText) && !(o.requester||'').includes(searchText)) return false;
       return true;
     })
     .sort((a, b) => {
@@ -153,6 +158,9 @@ function renderStats() {
   document.getElementById('stat-done').textContent    = done;
   document.getElementById('stat-overdue').textContent = overdue;
   document.getElementById('stat-overdue').className   = 'stat-value' + (overdue > 0 ? ' warn' : ' ok');
+  const notify = orders.filter(needsNotification).length;
+  document.getElementById('stat-notify').textContent = notify;
+  document.getElementById('stat-notify').className   = 'stat-value' + (notify > 0 ? ' warn' : ' ok');
 }
 
 function renderTable() {
@@ -179,6 +187,8 @@ function renderTable() {
       : '';
     const notified = o.completionNotified
       ? `<span class="notified-badge">連絡済</span>` : '';
+    const needNotify = needsNotification(o)
+      ? `<span class="notify-badge">🔔 要連絡</span>` : '';
     return `<tr onclick="openDetail('${o.id}')">
       <td><strong>${o.customerName} 様</strong></td>
       <td>${deviceBadge(o.device)}</td>
@@ -186,7 +196,7 @@ function renderTable() {
       <td>${o.staff || '—'}</td>
       <td>${o.requester || '—'}</td>
       <td>${laneBadge(o.lane)}</td>
-      <td>${statusBadge(o.status)}</td>
+      <td>${statusBadge(o.status)}${needNotify}</td>
       <td>${progress}</td>
     </tr>`;
   }).join('');
@@ -394,6 +404,7 @@ function openNewForm() {
   document.getElementById('form-lane').value           = '';
   document.getElementById('form-memo').value           = '';
   document.getElementById('kana-error').classList.remove('show');
+  document.getElementById('form-requires-notification').checked = false;
   document.querySelectorAll('.member-btn').forEach(b => b.classList.remove('selected'));
   document.getElementById('member-no-wrap').style.display = 'none';
   document.getElementById('form-member-no').value = '';
@@ -783,6 +794,8 @@ function submitNewOrder() {
   if (!isKatakana(name)) { err.classList.add('show'); return; }
   if (!selectedDevice) { alert('デバイス種別を選択してください'); return; }
 
+  const requiresNotification = document.getElementById('form-requires-notification').checked;
+
   const memberTypeBtn = document.querySelector('.member-btn.selected');
   const memberType    = memberTypeBtn ? memberTypeBtn.dataset.type : '';
   const memberNo      = ['青', 'SS等'].includes(memberType)
@@ -838,6 +851,7 @@ function submitNewOrder() {
     memberType,
     memberNo,
     status: 'waiting',
+    requiresNotification,
     completionNotified: false,
     checklist,
     createdAt: new Date().toISOString(),

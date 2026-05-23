@@ -195,6 +195,36 @@ tbody td { padding: 13px 16px; font-size: 14px; vertical-align: middle; }
 }
 .completion-label input { accent-color: var(--success); cursor: pointer; }
 
+.notify-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 7px;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.stat-card--notify { border-top: 3px solid var(--warning); }
+
+.form-notify-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 10px 16px;
+  background: #fef3c7;
+  border: 2px solid #fde68a;
+  border-radius: 8px;
+}
+.form-notify-label input { accent-color: var(--warning); width: 18px; height: 18px; cursor: pointer; }
+
 .notified-badge {
   display: inline-block;
   margin-left: 6px;
