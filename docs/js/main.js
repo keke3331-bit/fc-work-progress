@@ -14,6 +14,21 @@ function genId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 }
 
+// ─── Staff list ──────────────────────────────────────────────────────────────
+const STAFF = ['井戸', '関根', '柴', '片桐', '入江', '金', '玉井', '新田', '菊池', '渡辺', '濱田'];
+
+function populateStaffSelects() {
+  ['form-staff', 'form-requester'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const current = sel.value;
+    sel.innerHTML = '<option value="">選択してください</option>' +
+      STAFF.map(n => `<option value="${n}">${n}</option>`).join('');
+    sel.value = current;
+  });
+}
+populateStaffSelects();
+
 // ─── State ───────────────────────────────────────────────────────────────────
 let orders = loadOrders();
 let filterStatus = 'all';
@@ -67,7 +82,7 @@ function statusBadge(status) {
 }
 function laneBadge(lane) {
   if (!lane) return '—';
-  const map = { '第1レーン': 'lane1', '第2レーン': 'lane2', '第3レーン': 'lane3', '第4レーン': 'lane4', '第5レーン': 'lane5' };
+  const map = { '第1レーン': 'lane1', '第2レーン': 'lane2', '第3レーン': 'lane3', '第4レーン': 'lane4', '第5レーン': 'lane5', '表': 'omote', '裏': 'ura' };
   return `<span class="badge badge-${map[lane] || 'lane1'}">${lane}</span>`;
 }
 
