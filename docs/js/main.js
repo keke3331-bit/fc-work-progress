@@ -260,14 +260,34 @@ function openDetail(id) {
     render();
   };
 
+  // Overall staff row
+  const overallStaffDiv = document.getElementById('checklist-overall-staff');
+  if (overallStaffDiv) {
+    overallStaffDiv.innerHTML = `
+      <div class="overall-staff-row">
+        <span class="overall-staff-label">全体の作業者</span>
+        <select class="overall-staff-sel" onchange="updateOverallStaff('${id}', this.value)">
+          <option value="">未選択</option>
+          ${STAFF.map(n => `<option value="${escAttr(n)}"${o.staff===n?' selected':''}>${escHtml(n)}</option>`).join('')}
+        </select>
+      </div>`;
+  }
+
   // Checklist
   const ul = document.getElementById('detail-checklist');
-  ul.innerHTML = (o.checklist || []).map((item, idx) => `
+  ul.innerHTML = (o.checklist || []).map((item, idx) => {
+    const effectiveStaff = item.itemStaff || o.staff || '未設定';
+    const staffSel = `<select class="item-staff-sel" onchange="updateItemStaff('${id}',${idx},this.value)">
+      <option value="">全体 (${escHtml(o.staff || '未設定')})</option>
+      ${STAFF.map(n => `<option value="${escAttr(n)}"${item.itemStaff===n?' selected':''}>${escHtml(n)}</option>`).join('')}
+    </select>`;
+    return `
     <li class="${item.checked ? 'checked' : ''}" id="cli-${idx}">
       <input type="checkbox" ${item.checked ? 'checked' : ''}
         onchange="toggleCheck('${id}', ${idx}, this.checked)">
       <div style="flex:1;min-width:0">
         <div class="checklist-name">${escHtml(item.name)}</div>
+        <div class="item-staff-row"><span class="item-staff-label">作業者：</span>${staffSel}</div>
         ${renderDetailForModal(item.detail, item, idx, id)}
       </div>
       <div class="checklist-action">
@@ -275,7 +295,8 @@ function openDetail(id) {
           ? `<span class="completed-time">✅ ${formatCompletedAt(item.completedAt)}</span>`
           : `<button class="btn-complete" onclick="completeItem('${id}',${idx})">完了</button>`}
       </div>
-    </li>`).join('');
+    </li>`;
+  }).join('');
 
   // Add-work button
   const addWorkSection = document.getElementById('add-work-section');
@@ -881,6 +902,26 @@ function addWorkItems(orderId) {
 
 function cancelAddWork(orderId) {
   openDetail(orderId);
+}
+
+// ─── Per-item staff ───────────────────────────────────────────────────────────
+function updateOverallStaff(orderId, value) {
+  const o = orders.find(x => x.id === orderId);
+  if (!o) return;
+  o.staff = value;
+  saveOrders(orders);
+  render();
+  // Update "全体" option labels in all item selects without full re-render
+  document.querySelectorAll('.item-staff-sel option[value=""]').forEach(opt => {
+    opt.textContent = `全体 (${value || '未設定'})`;
+  });
+}
+
+function updateItemStaff(orderId, itemIdx, value) {
+  const o = orders.find(x => x.id === orderId);
+  if (!o || !o.checklist[itemIdx]) return;
+  o.checklist[itemIdx].itemStaff = value;
+  saveOrders(orders);
 }
 
 // ─── Initial render ───────────────────────────────────────────────────────────

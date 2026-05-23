@@ -495,6 +495,57 @@ tbody td { padding: 13px 16px; font-size: 14px; vertical-align: middle; }
   font-weight: 600;
 }
 
+/* ===== OVERALL STAFF ROW ===== */
+.overall-staff-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--primary-light);
+  border-radius: 8px;
+  border: 1px solid #bfdbfe;
+  margin-bottom: 12px;
+}
+.overall-staff-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary);
+  white-space: nowrap;
+}
+.overall-staff-sel {
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  background: var(--card);
+  color: var(--text);
+  cursor: pointer;
+}
+.overall-staff-sel:focus { outline: none; border-color: var(--primary); }
+
+/* ===== ITEM STAFF ===== */
+.item-staff-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+.item-staff-label { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+.item-staff-sel {
+  font-size: 11px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: inherit;
+  background: var(--card);
+  color: var(--text);
+  cursor: pointer;
+}
+.item-staff-sel:focus { outline: none; border-color: var(--primary); }
+.item-staff-sel option[value=""] { color: var(--text-muted); }
+
 /* ===== MEMBER TYPE SELECTOR ===== */
 .member-type-selector { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
 .member-btn {
