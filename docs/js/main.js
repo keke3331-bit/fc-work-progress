@@ -340,6 +340,8 @@ function openDetail(id) {
     delete addWorkSection.dataset.availableItems;
   }
 
+  document.getElementById('btn-print').onclick = () => printOrder(id);
+
   document.getElementById('btn-delete').onclick = () => {
     if (confirm(`「${o.customerName}」様の作業依頼を削除しますか？`)) {
       orders = orders.filter(x => x.id !== id);
@@ -963,6 +965,156 @@ function updateItemStaff(orderId, itemIdx, value) {
   if (!o || !o.checklist[itemIdx]) return;
   o.checklist[itemIdx].itemStaff = value;
   saveOrders(orders);
+}
+
+// ─── 印刷 ─────────────────────────────────────────────────────────────────────
+function printOrder(orderId) {
+  const o = orders.find(x => x.id === orderId);
+  if (!o) return;
+  const win = window.open('', '_blank', 'width=900,height=1000');
+  win.document.write(buildPrintHTML(o));
+  win.document.close();
+  win.addEventListener('load', () => { win.focus(); win.print(); });
+}
+
+function buildPrintHTML(o) {
+  const allItems = WORK_ITEMS[o.device] || [];
+  const checklistMap = {};
+  (o.checklist || []).forEach(c => { checklistMap[c.name] = c; });
+
+  const createdDate = o.createdAt ? new Date(o.createdAt).toLocaleDateString('ja-JP') : '—';
+
+  function renderPrintDetail(item, ci) {
+    if (!item.detail && !ci) return '';
+    const parts = [];
+    if (item.detail) {
+      if (item.detail.includes(' / ')) {
+        const sel = ci ? (ci.selectedOptions || []) : [];
+        parts.push(item.detail.split(' / ').map(opt =>
+          sel.includes(opt)
+            ? `<span style="background:#ffff00;font-weight:bold;padding:0 2px">${opt}</span>`
+            : `<span style="color:#bbb">${opt}</span>`
+        ).join('<span style="color:#bbb"> / </span>'));
+      } else if (/【[^】]*】/.test(item.detail)) {
+        const vals = ci ? (ci.inputValues || []) : [];
+        let n = 0;
+        parts.push(item.detail.replace(/【[^】]*】/g, () => {
+          const v = vals[n++] || '';
+          return `【<u style="font-weight:bold;min-width:40px;display:inline-block">${v}</u>】`;
+        }));
+      } else {
+        parts.push(item.detail);
+      }
+    }
+    if (ci) {
+      const ev = ci.extraValues || {};
+      (item.extras || []).forEach(ex => {
+        if (ex.type === 'sign_check') {
+          parts.push(`${ev.signed ? '☑' : '☐'} サイン確認　${ev.staffChecked ? '☑' : '☐'} 社員チェック`);
+        }
+        if (ex.type === 'username_select' && ev.usernameMode) {
+          const u = ev.usernameMode === '記述' ? `記述 (${ev.usernameText || ''})` : ev.usernameMode;
+          parts.push(`ユーザー名: <strong>${u}</strong>`);
+        }
+        if (ex.type === 'mail_address') {
+          Object.entries(ev.mailAddresses || {}).forEach(([t, a]) => {
+            if (a) parts.push(`${t}: <strong>${a}</strong>`);
+          });
+        }
+        if (ex.type === 'add_more') {
+          (ev.addedItems || []).filter(v => v).forEach(v => parts.push(`・${v}`));
+        }
+      });
+    }
+    return parts.join('<br>');
+  }
+
+  const rows = allItems.map(item => {
+    const ci = checklistMap[item.name];
+    const sel = !!ci;
+    const staffName = ci?.itemStaff || (sel ? o.staff || '' : '');
+    const doneAt = ci?.completedAt ? formatCompletedAt(ci.completedAt) : '';
+    return `<tr class="${sel ? 'i-sel' : 'i-no'}">
+      <td class="c-chk">${sel ? '☑' : '☐'}</td>
+      <td class="c-name">${item.name}</td>
+      <td class="c-det">${renderPrintDetail(item, ci)}</td>
+      <td class="c-stf">${staffName}</td>
+      <td class="c-don">${doneAt}</td>
+    </tr>`;
+  }).join('');
+
+  const customRows = (o.checklist || [])
+    .filter(ci => !allItems.some(it => it.name === ci.name))
+    .map(ci => `<tr class="i-sel i-cus">
+      <td class="c-chk">☑</td>
+      <td class="c-name">${ci.name} <small>※追加</small></td>
+      <td class="c-det">${ci.detail || ''}</td>
+      <td class="c-stf">${ci.itemStaff || o.staff || ''}</td>
+      <td class="c-don">${ci.completedAt ? formatCompletedAt(ci.completedAt) : ''}</td>
+    </tr>`).join('');
+
+  return `<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8">
+<title>作業票 - ${o.customerName}</title>
+<style>
+@page { size: A4 portrait; margin: 12mm 10mm; }
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Hiragino Sans','Meiryo','Yu Gothic',sans-serif;font-size:11px;color:#1e2a3a}
+.hdr{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #1a56db;padding-bottom:6px;margin-bottom:10px}
+.hdr-l .shop{font-size:11px;color:#1a56db;font-weight:bold}
+.hdr-l .ttl{font-size:20px;font-weight:bold;letter-spacing:.05em}
+.hdr-r{font-size:10px;color:#666}
+.ibox{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#ccc;border:1px solid #ccc;margin-bottom:10px}
+.ic{background:#fff;padding:4px 7px}
+.ic.s2{grid-column:span 2}.ic.s4{grid-column:span 4}
+.il{font-size:9px;color:#888;margin-bottom:1px}
+.iv{font-size:12px;font-weight:bold}
+table{width:100%;border-collapse:collapse;font-size:10.5px}
+thead th{background:#1a56db;color:#fff;padding:5px 6px;text-align:left;font-size:10px;font-weight:bold}
+.c-chk{width:22px;text-align:center;padding:4px 2px}
+.c-name{width:25%;padding:4px 6px}
+.c-det{padding:4px 6px}
+.c-stf{width:9%;padding:4px 5px;color:#555;font-size:10px}
+.c-don{width:12%;padding:4px 5px;color:#0d9e6e;font-size:9.5px;text-align:center}
+.i-sel td{border-bottom:1px solid #e0e0e0;background:#fffde7}
+.i-sel .c-name{font-weight:bold;color:#1e2a3a}
+.i-no td{border-bottom:1px solid #f4f4f4;color:#ccc}
+.i-no .c-name{color:#ccc}
+.i-cus td{background:#f0fff4!important}
+.ftr{margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.sbox{border:1px solid #ccc;padding:6px 10px;min-height:52px}
+.slbl{font-size:9px;color:#888;margin-bottom:2px}
+@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style></head><body>
+<div class="hdr">
+  <div class="hdr-l"><div class="shop">SLMC鎌ヶ谷BASE</div><div class="ttl">FC 作業票</div></div>
+  <div class="hdr-r">登録日：${createdDate}</div>
+</div>
+<div class="ibox">
+  <div class="ic s2"><div class="il">お客様名</div><div class="iv">${o.customerName} 様</div></div>
+  <div class="ic"><div class="il">機種</div><div class="iv">${o.device}</div></div>
+  <div class="ic"><div class="il">会員種別</div><div class="iv">${o.memberType || '—'}${o.memberNo ? ` (${o.memberNo})` : ''}</div></div>
+  <div class="ic"><div class="il">納期</div><div class="iv">${formatDeadline(o.deadline)}</div></div>
+  <div class="ic"><div class="il">作業者</div><div class="iv">${o.staff || '—'}</div></div>
+  <div class="ic"><div class="il">作業依頼者</div><div class="iv">${o.requester || '—'}</div></div>
+  <div class="ic"><div class="il">場所</div><div class="iv">${o.lane || '—'}</div></div>
+  <div class="ic"><div class="il">完了連絡</div><div class="iv">${o.completionNotified ? '済み' : '未'}</div></div>
+  ${o.memo ? `<div class="ic s4"><div class="il">メモ・備考</div><div class="iv" style="font-weight:normal;white-space:pre-wrap">${o.memo}</div></div>` : ''}
+</div>
+<table>
+  <thead><tr>
+    <th class="c-chk">✓</th>
+    <th class="c-name">作業項目</th>
+    <th class="c-det">詳細・選択内容</th>
+    <th class="c-stf">作業者</th>
+    <th class="c-don">完了時刻</th>
+  </tr></thead>
+  <tbody>${rows}${customRows}</tbody>
+</table>
+<div class="ftr">
+  <div class="sbox"><div class="slbl">お客様サイン</div></div>
+  <div class="sbox"><div class="slbl">スタッフ確認</div></div>
+</div>
+</body></html>`;
 }
 
 // ─── Firebase 初期化 ──────────────────────────────────────────────────────────

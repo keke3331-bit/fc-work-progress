@@ -371,6 +371,20 @@ tbody td { padding: 13px 16px; font-size: 14px; vertical-align: middle; }
   transition: background .15s;
 }
 .btn-secondary:hover { background: var(--bg); }
+.btn-print {
+  padding: 9px 18px;
+  border-radius: 6px;
+  border: 2px solid #64748b;
+  background: #fff;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all .15s;
+}
+.btn-print:hover { background: #334155; color: #fff; border-color: #334155; }
+
 .btn-danger {
   background: #fee2e2;
   color: var(--danger);
