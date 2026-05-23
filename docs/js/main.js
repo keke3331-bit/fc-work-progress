@@ -186,37 +186,9 @@ function renderTable() {
       ? `<span class="notified-badge">連絡済</span>` : '';
     const needNotify = needsNotification(o)
       ? `<span class="notify-badge">🔔 要連絡</span>` : '';
-
-    let subChecks = '';
-    (o.checklist || []).forEach((ci, ciIdx) => {
-      const wItem = (WORK_ITEMS[o.device] || []).find(w => w.name === ci.name);
-      if (!wItem || !wItem.extras) return;
-      const ev = ci.extraValues || {};
-      wItem.extras.forEach(ex => {
-        if (ex.type === 'data_transfer') {
-          subChecks += `<div class="dash-subcheck-row">
-            <label class="dash-subcheck-label${ev.dataExtracted?' dash-subcheck-done':''}" onclick="event.stopPropagation()" title="データ抜き出し完了">
-              <input type="checkbox" ${ev.dataExtracted?'checked':''}
-                onchange="event.stopPropagation();dashUpdateDataTransfer('${o.id}',${ciIdx},'dataExtracted',this.checked)">📤</label>
-            <label class="dash-subcheck-label${ev.dataRestored?' dash-subcheck-done':''}" onclick="event.stopPropagation()" title="データ戻し完了">
-              <input type="checkbox" ${ev.dataRestored?'checked':''}
-                onchange="event.stopPropagation();dashUpdateDataTransfer('${o.id}',${ciIdx},'dataRestored',this.checked)">📥</label>
-          </div>`;
-        }
-        if (ex.type === 'backup_check') {
-          subChecks += `<div class="dash-subcheck-row">
-            <label class="dash-subcheck-label${ev.backupDone?' dash-subcheck-done':''}" onclick="event.stopPropagation()" title="バックアップ済み">
-              <input type="checkbox" ${ev.backupDone?'checked':''}
-                onchange="event.stopPropagation();dashUpdateBackup('${o.id}',${ciIdx},this.checked)">💾</label>
-          </div>`;
-        }
-      });
-    });
-
-    const progress = `<div class="dash-progress">
-      ${totalCount > 0 ? `<span class="dash-count">${checkedCount}/${totalCount}</span>` : ''}
-      ${subChecks}
-    </div>`;
+    const progress = totalCount > 0
+      ? `<span style="font-size:12px;color:var(--text-muted)">${checkedCount}/${totalCount}</span>`
+      : '';
 
     return `<tr onclick="openDetail('${o.id}')">
       <td><strong>${o.customerName} 様</strong></td>
@@ -583,34 +555,6 @@ function checkDataTransfer(orderId, itemIdx) {
   }
 }
 
-function dashUpdateDataTransfer(orderId, itemIdx, key, value) {
-  updateExtraVal(orderId, itemIdx, key, value);
-  const o = orders.find(x => x.id === orderId);
-  if (!o || !o.checklist[itemIdx]) { render(); return; }
-  const ev = o.checklist[itemIdx].extraValues || {};
-  if (ev.dataExtracted && ev.dataRestored) {
-    const item = o.checklist[itemIdx];
-    item.checked = true;
-    item.completedAt = new Date().toISOString();
-    if (o.checklist.every(c => c.checked)) o.status = 'done';
-    saveOrders(orders);
-  }
-  render();
-}
-
-function dashUpdateBackup(orderId, itemIdx, value) {
-  updateExtraVal(orderId, itemIdx, 'backupDone', value);
-  if (value) {
-    const o = orders.find(x => x.id === orderId);
-    if (!o || !o.checklist[itemIdx]) { render(); return; }
-    const item = o.checklist[itemIdx];
-    item.checked = true;
-    item.completedAt = new Date().toISOString();
-    if (o.checklist.every(c => c.checked)) o.status = 'done';
-    saveOrders(orders);
-  }
-  render();
-}
 
 // ─── Extras event handlers ────────────────────────────────────────────────────
 function exclusiveSelectForm(btn, idx) {
