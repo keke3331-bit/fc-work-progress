@@ -304,7 +304,7 @@ function openDetail(id) {
   if (o.status === 'delivered') {
     btnDeliver.style.display = 'none';
     deliverInfo.style.display = '';
-    deliverInfo.innerHTML = `📦 <strong>${escHtml(o.deliveredTo || '—')}</strong> さんへお渡し済み（${o.deliveredAt ? formatCompletedAt(o.deliveredAt) : ''}）`;
+    deliverInfo.innerHTML = `📦 お客様へお渡し済み（${escHtml(o.deliveredTo || '—')}　${o.deliveredAt ? formatCompletedAt(o.deliveredAt) : ''}）`;
   } else {
     btnDeliver.style.display = '';
     deliverInfo.style.display = 'none';
