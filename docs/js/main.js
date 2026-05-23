@@ -39,7 +39,7 @@ let sortAsc      = true;
 
 // ─── Katakana validation ─────────────────────────────────────────────────────
 function isKatakana(str) {
-  return /^[゠-ヿー　 　ー]+$/.test(str.trim());
+  return /^[゠-ヿ]+$/.test(str.trim());
 }
 
 // ─── HTML escape helpers ──────────────────────────────────────────────────────
