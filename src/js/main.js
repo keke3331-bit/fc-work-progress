@@ -521,8 +521,37 @@ function renderExtrasForModal(extras, item, idx, orderId) {
           onclick="modalAddItem('${orderId}',${idx})">＋ 追加</button>
       </div>`;
     }
+    if (ex.type === 'data_transfer') {
+      return `<div class="extra-checks">
+        <label class="sub-check-label ${ev.dataExtracted ? 'sub-check-done' : ''}">
+          <input type="checkbox" ${ev.dataExtracted ? 'checked' : ''}
+            onchange="updateExtraVal('${orderId}',${idx},'dataExtracted',this.checked); checkDataTransfer('${orderId}',${idx})">
+          📤 データ抜き出し完了</label>
+        <label class="sub-check-label ${ev.dataRestored ? 'sub-check-done' : ''}">
+          <input type="checkbox" ${ev.dataRestored ? 'checked' : ''}
+            onchange="updateExtraVal('${orderId}',${idx},'dataRestored',this.checked); checkDataTransfer('${orderId}',${idx})">
+          📥 データ戻し完了</label>
+      </div>`;
+    }
+    if (ex.type === 'backup_check') {
+      return `<div class="extra-checks">
+        <label class="sub-check-label ${ev.backupDone ? 'sub-check-done' : ''}">
+          <input type="checkbox" ${ev.backupDone ? 'checked' : ''}
+            onchange="updateExtraVal('${orderId}',${idx},'backupDone',this.checked); if(this.checked) completeItem('${orderId}',${idx})">
+          💾 バックアップ済み</label>
+      </div>`;
+    }
     return '';
   }).join('');
+}
+
+function checkDataTransfer(orderId, itemIdx) {
+  const o = orders.find(x => x.id === orderId);
+  if (!o || !o.checklist[itemIdx]) return;
+  const ev = o.checklist[itemIdx].extraValues || {};
+  if (ev.dataExtracted && ev.dataRestored) {
+    completeItem(orderId, itemIdx);
+  }
 }
 
 // ─── Extras event handlers ────────────────────────────────────────────────────
@@ -1023,6 +1052,12 @@ function buildPrintHTML(o) {
         }
         if (ex.type === 'add_more') {
           (ev.addedItems || []).filter(v => v).forEach(v => parts.push(`・${v}`));
+        }
+        if (ex.type === 'data_transfer') {
+          parts.push(`☐ データ抜き出し完了　☐ データ戻し完了`);
+        }
+        if (ex.type === 'backup_check') {
+          parts.push(`☐ バックアップ済み`);
         }
       });
     }

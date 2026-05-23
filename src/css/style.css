@@ -516,6 +516,7 @@ tbody td { padding: 13px 16px; font-size: 14px; vertical-align: middle; }
   color: var(--text);
 }
 .sub-check-label input[type="checkbox"] { accent-color: var(--primary); }
+.sub-check-done { color: var(--success); font-weight: 700; }
 
 .extra-field {
   display: flex;
