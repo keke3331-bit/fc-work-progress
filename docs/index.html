@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FC 作業進捗管理ダッシュボード</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<header class="header">
+  <div class="header-title">
+    <span>🖥️</span>FC 作業進捗管理
+  </div>
+  <button class="btn-new" id="btn-new">＋ 新規作業登録</button>
+</header>
+
+<!-- ===== MAIN ===== -->
+<main class="main">
+
+  <!-- Stats -->
+  <div class="stats-bar">
+    <div class="stat-card">
+      <div class="stat-label">総件数</div>
+      <div class="stat-value" id="stat-all">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">作業中</div>
+      <div class="stat-value" id="stat-active">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">完了</div>
+      <div class="stat-value ok" id="stat-done">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">納期超過</div>
+      <div class="stat-value ok" id="stat-overdue">0</div>
+    </div>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="filter-bar">
+    <input type="text" id="search-input" placeholder="🔍 お客様名・担当者で検索">
+    <button class="filter-btn active" data-status="all">すべて</button>
+    <button class="filter-btn" data-status="waiting">待機中</button>
+    <button class="filter-btn" data-status="active">作業中</button>
+    <button class="filter-btn" data-status="done">完了</button>
+    &nbsp;
+    <button class="filter-btn active" data-device="all">全機種</button>
+    <button class="filter-btn" data-device="Mac">Mac</button>
+    <button class="filter-btn" data-device="Windows">Windows</button>
+    <button class="filter-btn" data-device="スマホ">スマホ</button>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th data-sort="customerName">お客様名 <span class="sort-icon">↕</span></th>
+          <th data-sort="device">機種 <span class="sort-icon">↕</span></th>
+          <th data-sort="deadline">納期 <span class="sort-icon">↑</span></th>
+          <th data-sort="staff">担当者 <span class="sort-icon">↕</span></th>
+          <th data-sort="requester">依頼者 <span class="sort-icon">↕</span></th>
+          <th data-sort="lane">場所 <span class="sort-icon">↕</span></th>
+          <th data-sort="status">ステータス <span class="sort-icon">↕</span></th>
+          <th>進捗</th>
+        </tr>
+      </thead>
+      <tbody id="order-tbody"></tbody>
+    </table>
+  </div>
+
+</main>
+
+<!-- ===== DETAIL MODAL ===== -->
+<div class="overlay" id="overlay-detail">
+  <div class="modal">
+    <button class="modal-close" id="btn-close-detail">✕</button>
+
+    <div class="modal-header">
+      <h2 id="detail-name"></h2>
+      <div class="modal-meta">
+        <span id="detail-device"></span>
+        <span>📅 納期：<strong id="detail-deadline" class=""></strong></span>
+        <span>🕐 登録：<span id="detail-created"></span></span>
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <h3>基本情報</h3>
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="label">担当者</div>
+          <div class="value" id="detail-staff"></div>
+        </div>
+        <div class="info-item">
+          <div class="label">作業依頼者</div>
+          <div class="value" id="detail-requester"></div>
+        </div>
+        <div class="info-item" style="grid-column:1/-1">
+          <div class="label">メモ</div>
+          <div class="value" id="detail-memo" style="white-space:pre-wrap"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <h3>ステータス変更</h3>
+      <select class="status-select" id="detail-status-sel">
+        <option value="waiting">待機中</option>
+        <option value="active">作業中</option>
+        <option value="done">完了</option>
+      </select>
+    </div>
+
+    <div class="detail-section">
+      <h3>場所変更</h3>
+      <select class="status-select" id="detail-lane-sel">
+        <option value="">未設定</option>
+        <option value="第1レーン">第1レーン</option>
+        <option value="第2レーン">第2レーン</option>
+        <option value="第3レーン">第3レーン</option>
+        <option value="第4レーン">第4レーン</option>
+        <option value="第5レーン">第5レーン</option>
+      </select>
+    </div>
+
+    <div class="detail-section">
+      <h3>作業チェックリスト</h3>
+      <ul class="checklist" id="detail-checklist"></ul>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-danger" id="btn-delete">🗑 削除</button>
+      <button class="btn-secondary" onclick="closeDetail()">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== NEW ORDER MODAL ===== -->
+<div class="overlay" id="overlay-new">
+  <div class="modal form-modal">
+    <button class="modal-close" id="btn-close-new">✕</button>
+
+    <div class="modal-header">
+      <h2>新規作業登録</h2>
+    </div>
+
+    <div class="form-grid">
+      <div class="form-group full">
+        <label for="form-customer">お客様名（カタカナ） <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="form-customer" placeholder="例：ヤマダ タロウ" autocomplete="off">
+        <span class="form-error" id="kana-error">⚠ カタカナで入力してください（ひらがな・漢字・英字は不可）</span>
+      </div>
+      <div class="form-group">
+        <label for="form-deadline-date">納期（日付）</label>
+        <input type="date" id="form-deadline-date">
+      </div>
+      <div class="form-group">
+        <label>納期（時刻）</label>
+        <div class="time-picker">
+          <select id="form-deadline-hour"><option value="">時</option></select>
+          <span>:</span>
+          <select id="form-deadline-minute"><option value="">分</option></select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="form-staff">担当者</label>
+        <input type="text" id="form-staff" placeholder="担当者名">
+      </div>
+      <div class="form-group">
+        <label for="form-requester">作業依頼者</label>
+        <input type="text" id="form-requester" placeholder="依頼者名">
+      </div>
+      <div class="form-group">
+        <label for="form-lane">場所</label>
+        <select id="form-lane">
+          <option value="">未設定</option>
+          <option value="第1レーン">第1レーン</option>
+          <option value="第2レーン">第2レーン</option>
+          <option value="第3レーン">第3レーン</option>
+          <option value="第4レーン">第4レーン</option>
+          <option value="第5レーン">第5レーン</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label for="form-memo">メモ・備考</label>
+        <textarea id="form-memo" placeholder="会員No.、特記事項など"></textarea>
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <h3>デバイス種別を選択</h3>
+      <div class="device-selector">
+        <button class="device-btn" data-device="Mac">🍎 Mac</button>
+        <button class="device-btn" data-device="Windows">🪟 Windows</button>
+        <button class="device-btn" data-device="スマホ">📱 スマホ</button>
+      </div>
+      <h3 style="margin-bottom:10px">作業項目（チェックして追加）</h3>
+      <div class="checklist-form" id="form-checklist-wrap">
+        <p style="color:var(--text-muted);font-size:13px;padding:10px 0">↑ デバイス種別を選択してください</p>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" id="btn-cancel">キャンセル</button>
+      <button class="btn-primary" id="btn-submit">✅ 登録する</button>
+    </div>
+  </div>
+</div>
+
+<script src="data/work_items.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
