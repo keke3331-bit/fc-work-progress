@@ -278,7 +278,7 @@ function openDetail(id) {
   ul.innerHTML = (o.checklist || []).map((item, idx) => {
     const effectiveStaff = item.itemStaff || o.staff || '未設定';
     const staffSel = `<select class="item-staff-sel" onchange="updateItemStaff('${id}',${idx},this.value)">
-      <option value="">全体 (${escHtml(o.staff || '未設定')})</option>
+      <option value="">(${escHtml(o.staff || '未設定')})</option>
       ${STAFF.map(n => `<option value="${escAttr(n)}"${item.itemStaff===n?' selected':''}>${escHtml(n)}</option>`).join('')}
     </select>`;
     return `
@@ -287,7 +287,7 @@ function openDetail(id) {
         onchange="toggleCheck('${id}', ${idx}, this.checked)">
       <div style="flex:1;min-width:0">
         <div class="checklist-name">${escHtml(item.name)}</div>
-        <div class="item-staff-row"><span class="item-staff-label">作業者：</span>${staffSel}</div>
+        <div class="item-staff-row">${staffSel}</div>
         ${renderDetailForModal(item.detail, item, idx, id)}
       </div>
       <div class="checklist-action">
@@ -911,9 +911,12 @@ function updateOverallStaff(orderId, value) {
   o.staff = value;
   saveOrders(orders);
   render();
-  // Update "全体" option labels in all item selects without full re-render
+  // 基本情報の作業者を更新
+  const detailStaffEl = document.getElementById('detail-staff');
+  if (detailStaffEl) detailStaffEl.textContent = value || '—';
+  // 各項目の「全体」ラベルを更新
   document.querySelectorAll('.item-staff-sel option[value=""]').forEach(opt => {
-    opt.textContent = `全体 (${value || '未設定'})`;
+    opt.textContent = `(${value || '未設定'})`;
   });
 }
 
