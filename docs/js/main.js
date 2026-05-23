@@ -2,16 +2,26 @@
 
 // ─── Storage ────────────────────────────────────────────────────────────────
 const STORAGE_KEY = 'fc_work_orders';
+let ordersRef = null;
 
 function loadOrders() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
   catch { return []; }
 }
-function saveOrders(orders) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
+function saveOrders(list) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  if (ordersRef) ordersRef.set(list);
 }
 function genId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+}
+
+function setSyncStatus(state) {
+  const el = document.getElementById('sync-status');
+  if (!el) return;
+  if (state === 'ok')      { el.textContent = '🟢 同期中';  el.style.color = '#a7f3d0'; }
+  else if (state === 'err'){ el.textContent = '🔴 エラー';  el.style.color = '#fca5a5'; }
+  else                     { el.textContent = '⚪ 未接続';  el.style.color = '#cbd5e1'; }
 }
 
 // ─── Staff list ──────────────────────────────────────────────────────────────
@@ -926,6 +936,39 @@ function updateItemStaff(orderId, itemIdx, value) {
   o.checklist[itemIdx].itemStaff = value;
   saveOrders(orders);
 }
+
+// ─── Firebase 初期化 ──────────────────────────────────────────────────────────
+(function initFirebase() {
+  if (typeof firebase === 'undefined') return;
+  if (!FIREBASE_CONFIG.apiKey) return;
+  try {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    const db = firebase.database();
+    ordersRef = db.ref('fc_work_orders');
+
+    // 接続状態の監視
+    firebase.database().ref('.info/connected').on('value', snap => {
+      setSyncStatus(snap.val() ? 'ok' : 'err');
+    });
+
+    // リアルタイム同期リスナー
+    ordersRef.on('value', snapshot => {
+      const data = snapshot.val();
+
+      if (data === null && orders.length > 0) {
+        // ローカルにデータがあれば Firebase へ移行
+        ordersRef.set(orders);
+        return;
+      }
+      orders = Array.isArray(data) ? data : [];
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
+      render();
+    });
+  } catch(e) {
+    console.warn('Firebase接続エラー（オフラインモード）:', e);
+    setSyncStatus('err');
+  }
+})();
 
 // ─── Initial render ───────────────────────────────────────────────────────────
 render();

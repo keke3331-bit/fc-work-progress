@@ -47,6 +47,14 @@ body {
   gap: 10px;
 }
 .header-title span { font-size: 22px; }
+.sync-status {
+  font-size: 12px;
+  font-weight: 600;
+  color: #cbd5e1;
+  margin-right: 8px;
+  white-space: nowrap;
+}
+
 .btn-new {
   background: #fff;
   color: var(--primary);
