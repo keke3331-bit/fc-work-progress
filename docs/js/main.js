@@ -63,7 +63,7 @@ function escAttr(s) {
 // ─── Deadline helpers ────────────────────────────────────────────────────────
 function deadlineClass(iso, status) {
   if (!iso) return '';
-  if (status === 'done') return 'deadline-done';
+  if (status === 'done' || status === 'delivered') return 'deadline-done';
   const diff = (new Date(iso) - new Date()) / 36e5; // hours
   if (diff < 0)  return 'deadline-over';
   if (diff < 24) return 'deadline-near';
@@ -88,7 +88,7 @@ function deviceBadge(device) {
   return `<span class="badge badge-${map[device] || 'mac'}">${device}</span>`;
 }
 function statusBadge(status) {
-  const labels = { active: '作業中', done: '完了', waiting: '待機中' };
+  const labels = { active: '作業中', done: '完了', waiting: '待機中', delivered: '📦 お渡し済み' };
   return `<span class="badge badge-status-${status}">${labels[status] || status}</span>`;
 }
 function laneBadge(lane) {
@@ -133,7 +133,9 @@ function needsNotification(o) {
 function filteredOrders() {
   return orders
     .filter(o => {
-      if (filterStatus === 'notify') return needsNotification(o);
+      if (filterStatus === 'delivered') return o.status === 'delivered';
+      if (filterStatus === 'notify') return needsNotification(o) && o.status !== 'delivered';
+      if (o.status === 'delivered') return false;
       if (filterStatus !== 'all' && o.status !== filterStatus) return false;
       if (filterDevice !== 'all' && o.device !== filterDevice) return false;
       if (searchText && !o.customerName.includes(searchText) &&
@@ -149,16 +151,16 @@ function filteredOrders() {
 }
 
 function renderStats() {
-  const all     = orders.length;
   const active  = orders.filter(o => o.status === 'active').length;
   const done    = orders.filter(o => o.status === 'done').length;
-  const overdue = orders.filter(o => o.deadline && new Date(o.deadline) < new Date() && o.status !== 'done').length;
+  const all     = orders.filter(o => o.status !== 'delivered').length;
+  const overdue = orders.filter(o => o.deadline && new Date(o.deadline) < new Date() && o.status !== 'done' && o.status !== 'delivered').length;
   document.getElementById('stat-all').textContent     = all;
   document.getElementById('stat-active').textContent  = active;
   document.getElementById('stat-done').textContent    = done;
   document.getElementById('stat-overdue').textContent = overdue;
   document.getElementById('stat-overdue').className   = 'stat-value' + (overdue > 0 ? ' warn' : ' ok');
-  const notify = orders.filter(needsNotification).length;
+  const notify = orders.filter(o => needsNotification(o) && o.status !== 'delivered').length;
   document.getElementById('stat-notify').textContent = notify;
   document.getElementById('stat-notify').className   = 'stat-value' + (notify > 0 ? ' warn' : ' ok');
 }
@@ -281,8 +283,39 @@ function openDetail(id) {
   sel.value = o.status;
   sel.onchange = () => {
     o.status = sel.value;
+    if (sel.value !== 'delivered') {
+      o.deliveredTo = null;
+      o.deliveredAt = null;
+    }
     saveOrders(orders);
     render();
+    openDetail(id);
+  };
+
+  // Deliver button & panel
+  const btnDeliver = document.getElementById('btn-deliver');
+  const deliverPanel = document.getElementById('deliver-panel');
+  const deliverInfo = document.getElementById('deliver-info');
+  const deliverPersonSel = document.getElementById('deliver-person-sel');
+  deliverPanel.style.display = 'none';
+  deliverPersonSel.innerHTML = STAFF.map(n =>
+    `<option value="${escAttr(n)}"${n === (o.requester || '') ? ' selected' : ''}>${escHtml(n)}</option>`
+  ).join('');
+  if (o.status === 'delivered') {
+    btnDeliver.style.display = 'none';
+    deliverInfo.style.display = '';
+    deliverInfo.innerHTML = `📦 <strong>${escHtml(o.deliveredTo || '—')}</strong> さんへお渡し済み（${o.deliveredAt ? formatCompletedAt(o.deliveredAt) : ''}）`;
+  } else {
+    btnDeliver.style.display = '';
+    deliverInfo.style.display = 'none';
+  }
+  document.getElementById('btn-deliver-confirm').onclick = () => {
+    o.status = 'delivered';
+    o.deliveredTo = deliverPersonSel.value;
+    o.deliveredAt = new Date().toISOString();
+    saveOrders(orders);
+    render();
+    openDetail(id);
   };
 
   // Lane select
@@ -381,6 +414,11 @@ function completeItem(orderId, idx) {
   saveOrders(orders);
   render();
   openDetail(orderId);
+}
+
+function toggleDeliverPanel() {
+  const panel = document.getElementById('deliver-panel');
+  panel.style.display = panel.style.display === 'none' ? '' : 'none';
 }
 
 function closeDetail() {

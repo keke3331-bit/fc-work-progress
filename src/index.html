@@ -52,6 +52,7 @@
     <button class="filter-btn" data-status="active">作業中</button>
     <button class="filter-btn" data-status="done">完了</button>
     <button class="filter-btn filter-btn--notify" data-status="notify">🔔 要連絡</button>
+    <button class="filter-btn filter-btn--delivered" data-status="delivered">📦 お渡し済み確認</button>
     &nbsp;
     <button class="filter-btn active" data-device="all">全機種</button>
     <button class="filter-btn" data-device="Mac">Mac</button>
@@ -126,11 +127,21 @@
 
     <div class="detail-section">
       <h3>ステータス変更</h3>
-      <select class="status-select" id="detail-status-sel">
-        <option value="waiting">待機中</option>
-        <option value="active">作業中</option>
-        <option value="done">完了</option>
-      </select>
+      <div class="status-change-row">
+        <select class="status-select" id="detail-status-sel">
+          <option value="waiting">待機中</option>
+          <option value="active">作業中</option>
+          <option value="done">完了</option>
+          <option value="delivered">📦 お渡し済み</option>
+        </select>
+        <button class="btn-deliver" id="btn-deliver" onclick="toggleDeliverPanel()">📦 お渡し済みにする</button>
+      </div>
+      <div class="deliver-panel" id="deliver-panel" style="display:none">
+        <label class="deliver-label">お渡し先</label>
+        <select class="status-select" id="deliver-person-sel"></select>
+        <button class="btn-primary" id="btn-deliver-confirm">確定</button>
+      </div>
+      <div class="deliver-info" id="deliver-info" style="display:none"></div>
     </div>
 
     <div class="detail-section">
