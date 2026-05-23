@@ -167,7 +167,7 @@ function renderTable() {
       ? `<span style="font-size:12px;color:var(--text-muted)">${checkedCount}/${totalCount}</span>`
       : '';
     return `<tr onclick="openDetail('${o.id}')">
-      <td><strong>${o.customerName}</strong></td>
+      <td><strong>${o.customerName} 様</strong></td>
       <td>${deviceBadge(o.device)}</td>
       <td class="${dlCls}">${dl}</td>
       <td>${o.staff || '—'}</td>
@@ -225,7 +225,7 @@ function openDetail(id) {
   const o = orders.find(x => x.id === id);
   if (!o) return;
 
-  document.getElementById('detail-name').textContent    = o.customerName;
+  document.getElementById('detail-name').textContent    = o.customerName + ' 様';
   document.getElementById('detail-device').innerHTML    = deviceBadge(o.device);
   document.getElementById('detail-deadline').textContent = formatDeadline(o.deadline);
   document.getElementById('detail-deadline').className   = deadlineClass(o.deadline);
