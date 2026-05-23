@@ -801,7 +801,32 @@ function renderDetailForModal(detail, item, idx, orderId) {
         return `【<input type="text" class="choice-input" value="${escAttr(vals[i]||'')}" placeholder="入力"
           onchange="updateBlank('${orderId}',${idx},${i},this.value)">】`;
       });
-      html = `<div class="checklist-detail">${processed}</div>`;
+      // inline sub-checks for data_transfer / backup_check
+      const ev = item.extraValues || {};
+      let inlineExtras = '';
+      (item.extras || []).forEach(ex => {
+        if (ex.type === 'data_transfer') {
+          inlineExtras += `<span class="inline-subcheck-wrap">
+            <label class="inline-subcheck-label${ev.dataExtracted?' sub-check-done':''}" title="データ抜き出し完了">
+              <input type="checkbox" ${ev.dataExtracted?'checked':''}
+                onchange="updateExtraVal('${orderId}',${idx},'dataExtracted',this.checked);checkDataTransfer('${orderId}',${idx})">📤</label>
+            <label class="inline-subcheck-label${ev.dataRestored?' sub-check-done':''}" title="データ戻し完了">
+              <input type="checkbox" ${ev.dataRestored?'checked':''}
+                onchange="updateExtraVal('${orderId}',${idx},'dataRestored',this.checked);checkDataTransfer('${orderId}',${idx})">📥</label>
+          </span>`;
+        }
+        if (ex.type === 'backup_check') {
+          inlineExtras += `<span class="inline-subcheck-wrap">
+            <label class="inline-subcheck-label${ev.backupDone?' sub-check-done':''}" title="バックアップ済み">
+              <input type="checkbox" ${ev.backupDone?'checked':''}
+                onchange="updateExtraVal('${orderId}',${idx},'backupDone',this.checked);if(this.checked)completeItem('${orderId}',${idx})">💾</label>
+          </span>`;
+        }
+      });
+      html = `<div class="checklist-detail">${processed}${inlineExtras}</div>`;
+      // skip these types in renderExtrasForModal below
+      const remainingExtras = (item.extras||[]).filter(e => e.type !== 'data_transfer' && e.type !== 'backup_check');
+      return html + renderExtrasForModal(remainingExtras, item, idx, orderId);
     } else if (detail.includes(' / ')) {
       const hasMail = (item.extras||[]).some(e => e.type === 'mail_address');
       let onclick;

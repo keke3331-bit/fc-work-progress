@@ -518,6 +518,19 @@ tbody td { padding: 13px 16px; font-size: 14px; vertical-align: middle; }
 .sub-check-label input[type="checkbox"] { accent-color: var(--primary); }
 .sub-check-done { color: var(--success); font-weight: 700; }
 
+.inline-subcheck-wrap {
+  display: inline-flex; align-items: center; gap: 4px;
+  margin-left: 8px; vertical-align: middle;
+}
+.inline-subcheck-label {
+  display: inline-flex; align-items: center; gap: 2px;
+  font-size: 12px; cursor: pointer; padding: 1px 5px;
+  border-radius: 4px; background: var(--bg); border: 1px solid var(--border);
+  user-select: none;
+}
+.inline-subcheck-label.sub-check-done { color: var(--success); font-weight: 700; border-color: var(--success); }
+.inline-subcheck-label input[type="checkbox"] { accent-color: var(--success); cursor: pointer; }
+
 .dash-progress { display: flex; flex-direction: column; gap: 3px; }
 .dash-count { font-size: 12px; color: var(--text-muted); }
 .dash-subcheck-row { display: flex; gap: 4px; }
