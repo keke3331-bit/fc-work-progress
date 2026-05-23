@@ -177,7 +177,9 @@ tbody td { padding: 13px 16px; font-size: 14px; vertical-align: middle; }
 .badge-status-done     { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
 .badge-status-waiting  { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
 
-.deadline-over { color: var(--danger); font-weight: 700; }
+.deadline-near { color: var(--warning); font-weight: 700; }
+.deadline-over { color: var(--danger);  font-weight: 700; }
+.deadline-done { color: var(--success); font-weight: 700; }
 
 .completion-label {
   display: inline-flex;

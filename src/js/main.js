@@ -62,9 +62,11 @@ function escAttr(s) {
 
 // ─── Deadline helpers ────────────────────────────────────────────────────────
 function deadlineClass(iso, status) {
-  if (!iso || status === 'done') return '';
+  if (!iso) return '';
+  if (status === 'done') return 'deadline-done';
   const diff = (new Date(iso) - new Date()) / 36e5; // hours
-  if (diff < 24) return 'deadline-over';
+  if (diff < 0)  return 'deadline-over';
+  if (diff < 24) return 'deadline-near';
   return '';
 }
 function formatDeadline(iso) {
