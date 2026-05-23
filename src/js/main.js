@@ -61,11 +61,10 @@ function escAttr(s) {
 }
 
 // ─── Deadline helpers ────────────────────────────────────────────────────────
-function deadlineClass(iso) {
-  if (!iso) return '';
+function deadlineClass(iso, status) {
+  if (!iso || status === 'done') return '';
   const diff = (new Date(iso) - new Date()) / 36e5; // hours
-  if (diff < 0)  return 'deadline-over';
-  if (diff < 24) return 'deadline-near';
+  if (diff < 24) return 'deadline-over';
   return '';
 }
 function formatDeadline(iso) {
@@ -170,16 +169,18 @@ function renderTable() {
 
   tbody.innerHTML = list.map(o => {
     const dl = formatDeadline(o.deadline);
-    const dlCls = deadlineClass(o.deadline);
+    const dlCls = deadlineClass(o.deadline, o.status);
     const checkedCount = (o.checklist || []).filter(c => c.checked).length;
     const totalCount   = (o.checklist || []).length;
     const progress = totalCount > 0
       ? `<span style="font-size:12px;color:var(--text-muted)">${checkedCount}/${totalCount}</span>`
       : '';
+    const notified = o.completionNotified
+      ? `<span class="notified-badge">連絡済</span>` : '';
     return `<tr onclick="openDetail('${o.id}')">
       <td><strong>${o.customerName} 様</strong></td>
       <td>${deviceBadge(o.device)}</td>
-      <td class="${dlCls}">${dl}</td>
+      <td class="${dlCls}">${dl}${notified}</td>
       <td>${o.staff || '—'}</td>
       <td>${o.requester || '—'}</td>
       <td>${laneBadge(o.lane)}</td>
@@ -238,7 +239,17 @@ function openDetail(id) {
   document.getElementById('detail-name').textContent    = o.customerName + ' 様';
   document.getElementById('detail-device').innerHTML    = deviceBadge(o.device);
   document.getElementById('detail-deadline').textContent = formatDeadline(o.deadline);
-  document.getElementById('detail-deadline').className   = deadlineClass(o.deadline);
+  document.getElementById('detail-deadline').className   = deadlineClass(o.deadline, o.status);
+
+  const notifyCb = document.getElementById('detail-completion-notify');
+  if (notifyCb) {
+    notifyCb.checked = o.completionNotified || false;
+    notifyCb.onchange = () => {
+      o.completionNotified = notifyCb.checked;
+      saveOrders(orders);
+      render();
+    };
+  }
   document.getElementById('detail-created').textContent  = o.createdAt ? new Date(o.createdAt).toLocaleString('ja-JP') : '—';
 
   document.getElementById('detail-staff').textContent     = o.staff     || '—';
@@ -825,6 +836,7 @@ function submitNewOrder() {
     memberType,
     memberNo,
     status: 'waiting',
+    completionNotified: false,
     checklist,
     createdAt: new Date().toISOString(),
   };
