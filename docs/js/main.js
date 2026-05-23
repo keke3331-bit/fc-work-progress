@@ -1035,7 +1035,7 @@ function buildPrintHTML(o) {
     const staffName = ci?.itemStaff || (sel ? o.staff || '' : '');
     const doneAt = ci?.completedAt ? formatCompletedAt(ci.completedAt) : '';
     return `<tr class="${sel ? 'i-sel' : 'i-no'}">
-      <td class="c-chk">${sel ? '☑' : '☐'}</td>
+      <td class="c-chk">☐</td>
       <td class="c-name">${item.name}</td>
       <td class="c-det">${renderPrintDetail(item, ci)}</td>
       <td class="c-stf">${staffName}</td>
@@ -1046,7 +1046,7 @@ function buildPrintHTML(o) {
   const customRows = (o.checklist || [])
     .filter(ci => !allItems.some(it => it.name === ci.name))
     .map(ci => `<tr class="i-sel i-cus">
-      <td class="c-chk">☑</td>
+      <td class="c-chk">☐</td>
       <td class="c-name">${ci.name} <small>※追加</small></td>
       <td class="c-det">${ci.detail || ''}</td>
       <td class="c-stf">${ci.itemStaff || o.staff || ''}</td>
@@ -1069,7 +1069,7 @@ body{font-family:'Hiragino Sans','Meiryo','Yu Gothic',sans-serif;font-size:11px;
 .il{font-size:9px;color:#888;margin-bottom:1px}
 .iv{font-size:12px;font-weight:bold}
 table{width:100%;border-collapse:collapse;font-size:10.5px}
-thead th{background:#1a56db;color:#fff;padding:5px 6px;text-align:left;font-size:10px;font-weight:bold}
+thead th{background:#1a56db!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:5px 6px;text-align:left;font-size:10px;font-weight:bold}
 .c-chk{width:22px;text-align:center;padding:4px 2px}
 .c-name{width:25%;padding:4px 6px}
 .c-det{padding:4px 6px}
