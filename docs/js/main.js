@@ -220,6 +220,13 @@ function openDetail(id) {
   document.getElementById('detail-requester').textContent = o.requester || '—';
   document.getElementById('detail-memo').textContent      = o.memo      || '—';
 
+  const memberTypeEl   = document.getElementById('detail-member-type');
+  const memberNoItem   = document.getElementById('detail-member-no-item');
+  const memberNoEl     = document.getElementById('detail-member-no');
+  if (memberTypeEl) memberTypeEl.textContent = o.memberType || '—';
+  if (memberNoItem)  memberNoItem.style.display = o.memberNo ? '' : 'none';
+  if (memberNoEl)    memberNoEl.textContent = o.memberNo || '';
+
   // Status select
   const sel = document.getElementById('detail-status-sel');
   sel.value = o.status;
@@ -254,6 +261,15 @@ function openDetail(id) {
           : `<button class="btn-complete" onclick="completeItem('${id}',${idx})">完了</button>`}
       </div>
     </li>`).join('');
+
+  // Add-work button
+  const addWorkSection = document.getElementById('add-work-section');
+  if (addWorkSection) {
+    addWorkSection.innerHTML = `<div class="add-work-btn-wrap">
+      <button type="button" class="btn-add-work" onclick="showAddWorkPanel('${id}')">＋ 作業を追加</button>
+    </div>`;
+    delete addWorkSection.dataset.availableItems;
+  }
 
   document.getElementById('btn-delete').onclick = () => {
     if (confirm(`「${o.customerName}」様の作業依頼を削除しますか？`)) {
@@ -319,6 +335,9 @@ function openNewForm() {
   document.getElementById('form-lane').value           = '';
   document.getElementById('form-memo').value           = '';
   document.getElementById('kana-error').classList.remove('show');
+  document.querySelectorAll('.member-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('member-no-wrap').style.display = 'none';
+  document.getElementById('form-member-no').value = '';
   document.querySelectorAll('.device-btn').forEach(b => b.classList.remove('selected'));
   document.getElementById('form-checklist-wrap').innerHTML =
     '<p style="color:var(--text-muted);font-size:13px;padding:10px 0">↑ デバイス種別を選択してください</p>';
@@ -705,8 +724,14 @@ function submitNewOrder() {
   if (!isKatakana(name)) { err.classList.add('show'); return; }
   if (!selectedDevice) { alert('デバイス種別を選択してください'); return; }
 
+  const memberTypeBtn = document.querySelector('.member-btn.selected');
+  const memberType    = memberTypeBtn ? memberTypeBtn.dataset.type : '';
+  const memberNo      = ['青', 'SS等'].includes(memberType)
+    ? document.getElementById('form-member-no').value.trim() : '';
+
   const checklist = WORK_ITEMS[selectedDevice].map((item, i) => {
     const cb = document.getElementById(`fci-${i}`);
+    if (!cb || !cb.checked) return null;
     const selectedOptions = [...document.querySelectorAll(
       `#form-checklist-wrap .choice-btn[data-item="${i}"].selected:not([data-exclusive])`)]
       .map(btn => btn.dataset.option);
@@ -739,8 +764,8 @@ function submitNewOrder() {
         extraValues.addedItems = [...inputs].map(inp => inp.value).filter(v => v.trim());
       }
     });
-    return { ...item, checked: cb ? cb.checked : false, selectedOptions, inputValues, extraValues };
-  });
+    return { ...item, checked: false, selectedOptions, inputValues, extraValues };
+  }).filter(Boolean);
 
   const newOrder = {
     id: genId(),
@@ -751,6 +776,8 @@ function submitNewOrder() {
     requester,
     lane,
     memo,
+    memberType,
+    memberNo,
     status: 'waiting',
     checklist,
     createdAt: new Date().toISOString(),
@@ -770,6 +797,76 @@ document.getElementById('overlay-new').addEventListener('click', e => {
 });
 document.getElementById('btn-close-new').addEventListener('click', closeNewForm);
 document.getElementById('btn-cancel').addEventListener('click', closeNewForm);
+
+// ─── Member type selector ────────────────────────────────────────────────────
+function selectMemberType(btn) {
+  document.querySelectorAll('.member-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  const needsNo = ['青', 'SS等'].includes(btn.dataset.type);
+  document.getElementById('member-no-wrap').style.display = needsNo ? '' : 'none';
+  if (!needsNo) document.getElementById('form-member-no').value = '';
+}
+
+// ─── Add work to existing order ───────────────────────────────────────────────
+function showAddWorkPanel(orderId) {
+  const o = orders.find(x => x.id === orderId);
+  if (!o) return;
+  const existingNames = new Set((o.checklist || []).map(c => c.name));
+  const available = (WORK_ITEMS[o.device] || []).filter(item => !existingNames.has(item.name));
+
+  const addWorkSection = document.getElementById('add-work-section');
+  if (!addWorkSection) return;
+  addWorkSection.dataset.availableItems = JSON.stringify(available);
+
+  const predefinedHTML = available.length > 0
+    ? available.map((item, i) =>
+        `<label class="add-work-check">
+          <input type="checkbox" data-add-idx="${i}"> ${escHtml(item.name)}
+        </label>`
+      ).join('')
+    : '<p style="font-size:13px;color:var(--text-muted)">追加できる定義済み項目はありません</p>';
+
+  addWorkSection.innerHTML = `
+    <div class="add-work-panel">
+      <div class="add-work-subtitle">追加する作業を選択してください</div>
+      <div class="add-work-checks">${predefinedHTML}</div>
+      <div class="add-work-custom">
+        <label style="font-size:13px;font-weight:700;display:block;margin-bottom:4px">カスタム作業項目（任意）</label>
+        <input type="text" id="add-work-custom-input" class="choice-input" style="width:100%" placeholder="作業内容を入力">
+      </div>
+      <div class="add-work-panel-footer">
+        <button type="button" class="btn-secondary" onclick="cancelAddWork('${orderId}')">キャンセル</button>
+        <button type="button" class="btn-primary" onclick="addWorkItems('${orderId}')">追加する</button>
+      </div>
+    </div>`;
+}
+
+function addWorkItems(orderId) {
+  const o = orders.find(x => x.id === orderId);
+  if (!o) return;
+  const addWorkSection = document.getElementById('add-work-section');
+  const available = JSON.parse(addWorkSection?.dataset.availableItems || '[]');
+
+  document.querySelectorAll('#add-work-section [data-add-idx]:checked').forEach(cb => {
+    const item = available[parseInt(cb.dataset.addIdx)];
+    if (item) {
+      o.checklist.push({ ...item, checked: false, selectedOptions: [], inputValues: [], extraValues: {} });
+    }
+  });
+
+  const customInput = document.getElementById('add-work-custom-input');
+  if (customInput && customInput.value.trim()) {
+    o.checklist.push({ name: customInput.value.trim(), detail: '', checked: false, selectedOptions: [], inputValues: [], extraValues: {} });
+  }
+
+  saveOrders(orders);
+  render();
+  openDetail(orderId);
+}
+
+function cancelAddWork(orderId) {
+  openDetail(orderId);
+}
 
 // ─── Initial render ───────────────────────────────────────────────────────────
 render();
