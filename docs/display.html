@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FC 作業状況ボード</title>
+  <style>
+    :root {
+      --bg:       #f0f4f8;
+      --bg2:      #ffffff;
+      --bg3:      #f0f4f8;
+      --border:   #d0d7e3;
+      --text:     #1e2a3a;
+      --muted:    #64748b;
+      --blue:     #1a56db;
+      --blue-dim: #dbeafe;
+      --green:    #0d9e6e;
+      --green-dim:#d1fae5;
+      --orange:   #b45309;
+      --orange-dim:#fef3c7;
+      --red:      #dc2626;
+      --red-dim:  #fee2e2;
+      --purple:   #7c3aed;
+      --teal:     #0e7490;
+      --col-active:  #b45309;
+      --col-waiting: #1a56db;
+      --col-done:    #0d9e6e;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Hiragino Sans', 'Meiryo', 'Yu Gothic', sans-serif;
+      overflow: hidden;
+    }
+
+    /* ===== HEADER ===== */
+    .top-bar {
+      background: var(--blue);
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
+      height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      flex-shrink: 0;
+    }
+    .top-bar-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      white-space: nowrap;
+    }
+    .top-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: .04em;
+    }
+    .top-title span { color: #bfdbfe; }
+    .sync-dot {
+      font-size: 12px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.75);
+    }
+
+    /* Stats */
+    .stats-row {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+    .stat-chip {
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 8px;
+      padding: 8px 18px;
+      text-align: center;
+      min-width: 80px;
+    }
+    .stat-chip .num {
+      font-size: 28px;
+      font-weight: 800;
+      line-height: 1;
+      color: #fff;
+    }
+    .stat-chip .lbl {
+      font-size: 11px;
+      color: rgba(255,255,255,0.75);
+      margin-top: 2px;
+    }
+    .stat-chip.overdue .num { color: #fca5a5; }
+    .stat-chip.active  .num { color: #fde68a; }
+    .stat-chip.notify  .num { color: #ddd6fe; }
+    .stat-chip.done    .num { color: #6ee7b7; }
+
+    /* Clock */
+    .clock-block {
+      text-align: right;
+      white-space: nowrap;
+    }
+    .clock-time {
+      font-size: 36px;
+      font-weight: 800;
+      letter-spacing: .04em;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      color: #fff;
+    }
+    .clock-date {
+      font-size: 12px;
+      color: rgba(255,255,255,0.75);
+      margin-top: 2px;
+    }
+
+    /* ===== COLUMNS ===== */
+    .board {
+      display: grid;
+      grid-template-columns: 1fr 1fr 0.8fr;
+      gap: 0;
+      height: calc(100vh - 72px);
+    }
+    .col {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .col:last-child { border-right: none; }
+
+    .col-header {
+      padding: 14px 20px 10px;
+      border-bottom: 1px solid var(--border);
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .col-title {
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+    .col-title.active  { color: var(--col-active); }
+    .col-title.waiting { color: var(--col-waiting); }
+    .col-title.done    { color: var(--col-done); }
+    .col-count {
+      font-size: 20px;
+      font-weight: 800;
+      border-radius: 6px;
+      padding: 2px 12px;
+    }
+    .col-count.active  { color: var(--col-active); background: var(--orange-dim); border: 1px solid var(--col-active); }
+    .col-count.waiting { color: var(--col-waiting); background: var(--blue-dim);  border: 1px solid var(--col-waiting); }
+    .col-count.done    { color: var(--col-done);    background: var(--green-dim); border: 1px solid var(--col-done); }
+
+    .col-body {
+      overflow-y: auto;
+      flex: 1;
+      padding: 14px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+    .col-body::-webkit-scrollbar { width: 5px; }
+    .col-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* ===== CARDS ===== */
+    .card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      position: relative;
+      transition: transform .15s;
+      box-shadow: 0 1px 4px rgba(30,42,58,.07);
+    }
+    .card.active  { border-left: 4px solid var(--col-active);  background: #fffdf7; }
+    .card.waiting { border-left: 4px solid var(--col-waiting); background: #f8faff; }
+    .card.done    { border-left: 4px solid var(--col-done);    background: #f6fff9; opacity: .8; }
+    .card.overdue { border-left: 4px solid var(--red);         background: var(--red-dim); }
+
+    .card-row1 {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .card-name {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: .02em;
+      line-height: 1.1;
+    }
+    .card-name.done { color: var(--muted); font-size: 18px; }
+    .card-badges {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .badge {
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 5px;
+      padding: 2px 8px;
+      white-space: nowrap;
+    }
+    .badge-mac  { background: #dbeafe; color: #1a56db; border: 1px solid #93c5fd; }
+    .badge-win  { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+    .badge-sp   { background: #ede9fe; color: #5b21b6; border: 1px solid #c4b5fd; }
+    .badge-notify { background: #fff1f2; color: #be123c; border: 1px solid #fca5a5; font-size: 10px; }
+    .badge-member-ao  { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+    .badge-member-ss  { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+
+    .card-row2 {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-size: 13px;
+    }
+    .card-deadline {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: .01em;
+    }
+    .card-deadline.over { color: var(--red); font-weight: 800; }
+    .card-deadline.near { color: var(--orange); font-weight: 700; }
+    .card-deadline.ok   { color: var(--text); }
+    .card-deadline.done { color: var(--muted); font-size: 13px; }
+
+    .card-sep { color: var(--border); }
+
+    .card-staff, .card-lane {
+      font-size: 13px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .card-staff strong, .card-lane strong {
+      color: var(--text);
+      font-size: 14px;
+    }
+
+    .card-progress {
+      margin-top: 8px;
+    }
+    .progress-bar-wrap {
+      height: 5px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .progress-bar {
+      height: 100%;
+      border-radius: 2px;
+      transition: width .3s;
+    }
+    .progress-bar.active  { background: var(--col-active); }
+    .progress-bar.waiting { background: var(--col-waiting); }
+    .progress-bar.done    { background: var(--col-done); }
+    .progress-label {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 3px;
+      text-align: right;
+    }
+
+    /* overdue warning pulse */
+    @keyframes pulse-bg {
+      0%, 100% { background: var(--red-dim); }
+      50%       { background: #fecaca; }
+    }
+    .card.overdue { animation: pulse-bg 2.5s ease-in-out infinite; }
+
+    /* notify icon */
+    .notify-icon {
+      position: absolute;
+      top: 10px;
+      left: -2px;
+      font-size: 14px;
+    }
+
+    /* empty state */
+    .empty-col {
+      color: var(--muted);
+      font-size: 14px;
+      text-align: center;
+      padding: 40px 0;
+      background: #fff;
+      border-radius: 10px;
+      border: 1px dashed var(--border);
+    }
+
+    /* ===== REFRESH INDICATOR ===== */
+    .refresh-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      height: 3px;
+      background: var(--blue);
+      animation: refresh-progress 30s linear infinite;
+      z-index: 999;
+    }
+    @keyframes refresh-progress {
+      from { width: 0; }
+      to   { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="top-bar">
+  <div class="top-bar-left">
+    <div class="top-title">🖥️ FC <span>作業状況ボード</span></div>
+    <span class="sync-dot" id="sync-dot">⚪ 未接続</span>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-chip active">
+      <div class="num" id="s-active">0</div>
+      <div class="lbl">作業中</div>
+    </div>
+    <div class="stat-chip" style="">
+      <div class="num" id="s-waiting" style="color:var(--col-waiting)">0</div>
+      <div class="lbl">待機中</div>
+    </div>
+    <div class="stat-chip done">
+      <div class="num" id="s-done">0</div>
+      <div class="lbl">完了</div>
+    </div>
+    <div class="stat-chip overdue">
+      <div class="num" id="s-overdue">0</div>
+      <div class="lbl">納期超過</div>
+    </div>
+    <div class="stat-chip notify">
+      <div class="num" id="s-notify">0</div>
+      <div class="lbl">🔔 要連絡</div>
+    </div>
+  </div>
+
+  <div class="clock-block">
+    <div class="clock-time" id="clock-time">--:--:--</div>
+    <div class="clock-date" id="clock-date"></div>
+  </div>
+</div>
+
+<!-- BOARD -->
+<div class="board">
+  <div class="col">
+    <div class="col-header">
+      <span class="col-title active">▶ 作業中</span>
+      <span class="col-count active" id="cnt-active">0</span>
+    </div>
+    <div class="col-body" id="col-active"></div>
+  </div>
+
+  <div class="col">
+    <div class="col-header">
+      <span class="col-title waiting">⏳ 待機中</span>
+      <span class="col-count waiting" id="cnt-waiting">0</span>
+    </div>
+    <div class="col-body" id="col-waiting"></div>
+  </div>
+
+  <div class="col">
+    <div class="col-header">
+      <span class="col-title done">✅ 完了</span>
+      <span class="col-count done" id="cnt-done">0</span>
+    </div>
+    <div class="col-body" id="col-done"></div>
+  </div>
+</div>
+
+<div class="refresh-bar" id="refresh-bar"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script>
+'use strict';
+
+const STORAGE_KEY = 'fc_work_orders';
+let orders = [];
+
+// ── Clock ──────────────────────────────────────────────────────────────────
+const DAYS = ['日','月','火','水','木','金','土'];
+function tickClock() {
+  const now = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  document.getElementById('clock-time').textContent =
+    `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  document.getElementById('clock-date').textContent =
+    `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日（${DAYS[now.getDay()]}）`;
+}
+setInterval(tickClock, 1000);
+tickClock();
+
+// ── Deadline helpers ───────────────────────────────────────────────────────
+function dlClass(iso, status) {
+  if (!iso) return '';
+  if (status === 'done' || status === 'delivered') return 'done';
+  const diff = (new Date(iso) - new Date()) / 36e5;
+  if (diff < 0)  return 'over';
+  if (diff < 24) return 'near';
+  return 'ok';
+}
+function formatDl(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getMonth()+1}/${d.getDate()}(${DAYS[d.getDay()]}) ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// ── Device badge ───────────────────────────────────────────────────────────
+function devBadge(dev) {
+  const map = { Mac: 'mac', Windows: 'win', スマホ: 'sp' };
+  return `<span class="badge badge-${map[dev]||'mac'}">${dev}</span>`;
+}
+function memberBadge(type) {
+  if (!type || type === '一般/白') return '';
+  const cls = type === 'SS等' ? 'badge-member-ss' : 'badge-member-ao';
+  return `<span class="badge ${cls}">${type}</span>`;
+}
+
+// ── Card builder ───────────────────────────────────────────────────────────
+function buildCard(o) {
+  const cls      = o.status === 'active' ? 'active' : o.status === 'waiting' ? 'waiting' : 'done';
+  const dc       = dlClass(o.deadline, o.status);
+  const isOver   = dc === 'over';
+  const checked  = (o.checklist||[]).filter(c=>c.checked).length;
+  const total    = (o.checklist||[]).length;
+  const pct      = total > 0 ? Math.round(checked/total*100) : (o.status==='done' ? 100 : 0);
+  const needNotif= o.requiresNotification && !o.completionNotified;
+
+  return `
+  <div class="card ${cls}${isOver?' overdue':''}">
+    ${needNotif ? '<span class="notify-icon">🔔</span>' : ''}
+    <div class="card-row1">
+      <div class="card-name${o.status==='done'?' done':''}">${escHtml(o.customerName)} 様</div>
+      <div class="card-badges">
+        ${devBadge(o.device)}
+        ${memberBadge(o.memberType)}
+        ${needNotif ? '<span class="badge badge-notify">要連絡</span>' : ''}
+      </div>
+    </div>
+    <div class="card-row2">
+      <span class="card-deadline ${dc}">📅 ${formatDl(o.deadline)}</span>
+      <span class="card-sep">│</span>
+      <span class="card-staff">👤 <strong>${escHtml(o.staff||'—')}</strong></span>
+      ${o.lane ? `<span class="card-sep">│</span><span class="card-lane">📍 <strong>${escHtml(o.lane)}</strong></span>` : ''}
+    </div>
+    ${total > 0 ? `
+    <div class="card-progress">
+      <div class="progress-bar-wrap">
+        <div class="progress-bar ${cls}" style="width:${pct}%"></div>
+      </div>
+      <div class="progress-label">${checked}/${total} 完了</div>
+    </div>` : ''}
+  </div>`;
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function render() {
+  const active  = orders.filter(o => o.status === 'active');
+  const waiting = orders.filter(o => o.status === 'waiting');
+  const done    = orders.filter(o => o.status === 'done');
+  const overdue = orders.filter(o => o.deadline && new Date(o.deadline) < new Date()
+                                     && o.status !== 'done' && o.status !== 'delivered');
+  const notify  = orders.filter(o => o.requiresNotification && !o.completionNotified
+                                     && o.status !== 'delivered');
+
+  // Sort: overdue first, then by deadline
+  const sortDl = (a,b) => {
+    const da = a.deadline||'9', db = b.deadline||'9';
+    return da < db ? -1 : da > db ? 1 : 0;
+  };
+  active.sort(sortDl);
+  waiting.sort(sortDl);
+  done.sort((a,b) => (b.checklist||[]).filter(c=>c.checked).length - (a.checklist||[]).filter(c=>c.checked).length);
+
+  // Stats
+  document.getElementById('s-active').textContent  = active.length;
+  document.getElementById('s-waiting').textContent = waiting.length;
+  document.getElementById('s-done').textContent    = done.length;
+  document.getElementById('s-overdue').textContent = overdue.length;
+  document.getElementById('s-notify').textContent  = notify.length;
+  document.getElementById('cnt-active').textContent  = active.length;
+  document.getElementById('cnt-waiting').textContent = waiting.length;
+  document.getElementById('cnt-done').textContent    = done.length;
+
+  // Columns
+  const colActive  = document.getElementById('col-active');
+  const colWaiting = document.getElementById('col-waiting');
+  const colDone    = document.getElementById('col-done');
+
+  colActive.innerHTML  = active.length  ? active.map(buildCard).join('')  : '<div class="empty-col">作業中の案件はありません</div>';
+  colWaiting.innerHTML = waiting.length ? waiting.map(buildCard).join('') : '<div class="empty-col">待機中の案件はありません</div>';
+  colDone.innerHTML    = done.length    ? done.map(buildCard).join('')    : '<div class="empty-col">完了の案件はありません</div>';
+}
+
+// ── Data load ──────────────────────────────────────────────────────────────
+function loadLocal() {
+  try { orders = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch { orders = []; }
+  // exclude delivered
+  orders = orders.filter(o => o.status !== 'delivered');
+  render();
+}
+
+// ── Firebase ───────────────────────────────────────────────────────────────
+(function initFirebase() {
+  if (typeof firebase === 'undefined') return loadLocal();
+  if (!FIREBASE_CONFIG.apiKey) return loadLocal();
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    const db = firebase.database();
+
+    firebase.database().ref('.info/connected').on('value', snap => {
+      const dot = document.getElementById('sync-dot');
+      if (snap.val()) { dot.textContent = '🟢 同期中'; dot.style.color = '#6ee7b7'; }
+      else            { dot.textContent = '🔴 未接続'; dot.style.color = '#fca5a5'; }
+    });
+
+    db.ref('fc_work_orders').on('value', snap => {
+      const data = snap.val();
+      if (Array.isArray(data)) {
+        orders = data.filter(o => o.status !== 'delivered');
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        render();
+      } else {
+        loadLocal();
+      }
+    });
+  } catch(e) {
+    console.warn('Firebase初期化エラー:', e);
+    loadLocal();
+  }
+})();
+
+// ── Auto-refresh (fallback for non-Firebase) ───────────────────────────────
+setInterval(() => {
+  // Only reload from localStorage if not using Firebase live sync
+  if (typeof firebase === 'undefined' || !FIREBASE_CONFIG.apiKey) loadLocal();
+}, 30000);
+
+// Reset progress bar animation
+function resetRefreshBar() {
+  const bar = document.getElementById('refresh-bar');
+  bar.style.animation = 'none';
+  bar.offsetHeight; // reflow
+  bar.style.animation = '';
+}
+setInterval(resetRefreshBar, 30000);
+</script>
+</body>
+</html>
