@@ -496,6 +496,17 @@ function renderExtrasForForm(extras, item, idx) {
         <label class="sub-check-label"><input type="checkbox" data-extra="faceToFace" data-item="${idx}"> 👤 面前対応</label>
       </div>`;
     }
+    if (ex.type === 'account_2fa_check') {
+      return `<div class="extra-checks">
+        <label class="sub-check-label"><input type="checkbox" data-extra="accountConfirmed" data-item="${idx}"> ✅ アカウント確認済み</label>
+        <label class="sub-check-label"><input type="checkbox" data-extra="twoFaDestConfirmed" data-item="${idx}"> 📩 2ファクタ送信先確認済み</label>
+      </div>`;
+    }
+    if (ex.type === 'theft_protection_check') {
+      return `<div class="extra-checks">
+        <label class="sub-check-label"><input type="checkbox" data-extra="theftProtectionCleared" data-item="${idx}"> 🔓 盗難防止保護解除済み</label>
+      </div>`;
+    }
     if (ex.type === 'username_select') {
       return `<div class="choice-group">
         ${['記述','MSアカウント表記名','owner'].map(opt =>
@@ -573,6 +584,26 @@ function renderExtrasForModal(extras, item, idx, orderId) {
           <input type="checkbox" ${ev.faceToFace?'checked':''}
             onchange="updateExtraVal('${orderId}',${idx},'faceToFace',this.checked)">
           <span>👤 面前対応</span></label>
+      </div>`;
+    }
+    if (ex.type === 'account_2fa_check') {
+      return `<div class="extra-checks">
+        <label class="sub-check-label ${ev.accountConfirmed ? 'sub-check-done' : ''}">
+          <input type="checkbox" ${ev.accountConfirmed?'checked':''}
+            onchange="updateExtraVal('${orderId}',${idx},'accountConfirmed',this.checked)">
+          <span>✅ アカウント確認済み</span></label>
+        <label class="sub-check-label ${ev.twoFaDestConfirmed ? 'sub-check-done' : ''}">
+          <input type="checkbox" ${ev.twoFaDestConfirmed?'checked':''}
+            onchange="updateExtraVal('${orderId}',${idx},'twoFaDestConfirmed',this.checked)">
+          <span>📩 2ファクタ送信先確認済み</span></label>
+      </div>`;
+    }
+    if (ex.type === 'theft_protection_check') {
+      return `<div class="extra-checks">
+        <label class="sub-check-label ${ev.theftProtectionCleared ? 'sub-check-done' : ''}">
+          <input type="checkbox" ${ev.theftProtectionCleared?'checked':''}
+            onchange="updateExtraVal('${orderId}',${idx},'theftProtectionCleared',this.checked)">
+          <span>🔓 盗難防止保護解除済み</span></label>
       </div>`;
     }
     if (ex.type === 'username_select') {
@@ -1009,6 +1040,16 @@ function submitNewOrder() {
         if (a) extraValues.appleIdConfirmed = a.checked;
         if (f) extraValues.faceToFace = f.checked;
       }
+      if (ex.type === 'account_2fa_check') {
+        const a = document.querySelector(`#form-checklist-wrap [data-extra="accountConfirmed"][data-item="${i}"]`);
+        const t = document.querySelector(`#form-checklist-wrap [data-extra="twoFaDestConfirmed"][data-item="${i}"]`);
+        if (a) extraValues.accountConfirmed = a.checked;
+        if (t) extraValues.twoFaDestConfirmed = t.checked;
+      }
+      if (ex.type === 'theft_protection_check') {
+        const t = document.querySelector(`#form-checklist-wrap [data-extra="theftProtectionCleared"][data-item="${i}"]`);
+        if (t) extraValues.theftProtectionCleared = t.checked;
+      }
       if (ex.type === 'username_select') {
         const mb = document.querySelector(`#form-checklist-wrap .choice-btn[data-exclusive="uname${i}"].selected`);
         if (mb) extraValues.usernameMode = mb.dataset.option;
@@ -1209,6 +1250,12 @@ function buildPrintHTML(o) {
         }
         if (ex.type === 'apple_id_check') {
           parts.push(`${ev.appleIdConfirmed ? '☑' : '☐'} Apple ID 確認済み　${ev.faceToFace ? '☑' : '☐'} 面前対応`);
+        }
+        if (ex.type === 'account_2fa_check') {
+          parts.push(`${ev.accountConfirmed ? '☑' : '☐'} アカウント確認済み　${ev.twoFaDestConfirmed ? '☑' : '☐'} 2ファクタ送信先確認済み`);
+        }
+        if (ex.type === 'theft_protection_check') {
+          parts.push(`${ev.theftProtectionCleared ? '☑' : '☐'} 盗難防止保護解除済み`);
         }
         if (ex.type === 'username_select' && ev.usernameMode) {
           const u = ev.usernameMode === '記述' ? `記述 (${ev.usernameText || ''})` : ev.usernameMode;
