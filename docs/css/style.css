@@ -584,6 +584,34 @@ tbody td { padding: 13px 16px; font-size: 14px; vertical-align: middle; }
 .media-type-section { margin-top: 8px; }
 .media-type-section .extra-label { display: block; margin-bottom: 4px; }
 
+.btn-edit-deadline {
+  background: none; border: none; cursor: pointer;
+  font-size: 13px; padding: 0 4px; opacity: .6;
+  vertical-align: middle;
+}
+.btn-edit-deadline:hover { opacity: 1; }
+
+.original-deadline {
+  font-size: 11px; color: var(--text-muted);
+  margin-left: 4px;
+}
+
+.deadline-edit-panel {
+  display: flex; align-items: center; gap: 6px;
+  flex-wrap: wrap; margin-top: 6px;
+  padding: 8px 10px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.deadline-edit-panel input[type="date"],
+.deadline-edit-panel select {
+  border: 1px solid var(--border); border-radius: 5px;
+  padding: 4px 6px; font-size: 13px;
+  background: var(--bg); color: var(--text);
+}
+.btn-sm { padding: 4px 12px !important; font-size: 12px !important; }
+
 
 .extra-field {
   display: flex;

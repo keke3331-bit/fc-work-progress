@@ -256,6 +256,24 @@ function openDetail(id) {
   document.getElementById('detail-deadline').textContent = formatDeadline(o.deadline);
   document.getElementById('detail-deadline').className   = deadlineClass(o.deadline, o.status);
 
+  // 初回納期表示（変更済みの場合のみ表示）
+  const origEl = document.getElementById('detail-original-deadline');
+  if (origEl) {
+    if (o.originalDeadline && o.originalDeadline !== o.deadline) {
+      origEl.textContent = `（初回：${formatDeadline(o.originalDeadline)}）`;
+      origEl.style.display = '';
+    } else {
+      origEl.style.display = 'none';
+    }
+  }
+
+  // 納期編集パネルを閉じた状態にリセット
+  const panel = document.getElementById('deadline-edit-panel');
+  if (panel) panel.style.display = 'none';
+
+  // 納期編集パネルの時刻セレクト初期化
+  initDeadlineEditSelects(id);
+
   const notifyCb = document.getElementById('detail-completion-notify');
   if (notifyCb) {
     notifyCb.checked = o.completionNotified || false;
@@ -434,6 +452,66 @@ function completeItem(orderId, idx) {
 function toggleDeliverPanel() {
   const panel = document.getElementById('deliver-panel');
   panel.style.display = panel.style.display === 'none' ? '' : 'none';
+}
+
+function initDeadlineEditSelects(orderId) {
+  const hourSel = document.getElementById('edit-deadline-hour');
+  const minSel  = document.getElementById('edit-deadline-minute');
+  if (!hourSel || !minSel) return;
+
+  if (hourSel.options.length <= 1) {
+    for (let h = 0; h <= 23; h++) {
+      const o = document.createElement('option');
+      o.value = String(h).padStart(2,'0');
+      o.textContent = String(h).padStart(2,'0') + '時';
+      hourSel.appendChild(o);
+    }
+  }
+  if (minSel.options.length <= 1) {
+    ['00','15','30','45'].forEach(m => {
+      const o = document.createElement('option');
+      o.value = m; o.textContent = m + '分';
+      minSel.appendChild(o);
+    });
+  }
+
+  const order = orders.find(x => x.id === orderId);
+  const dateEl = document.getElementById('edit-deadline-date');
+  if (order && order.deadline) {
+    const d = new Date(order.deadline);
+    dateEl.value = order.deadline.slice(0,10);
+    hourSel.value = String(d.getHours()).padStart(2,'0');
+    const m = d.getMinutes();
+    const rounded = ['00','15','30','45'].reduce((prev, cur) =>
+      Math.abs(parseInt(cur)-m) < Math.abs(parseInt(prev)-m) ? cur : prev);
+    minSel.value = rounded;
+  } else {
+    dateEl.value = '';
+    hourSel.value = '';
+    minSel.value = '';
+  }
+
+  document.getElementById('btn-deadline-save').onclick = () => saveDeadlineEdit(orderId);
+}
+
+function toggleDeadlineEdit() {
+  const panel = document.getElementById('deadline-edit-panel');
+  panel.style.display = panel.style.display === 'none' ? '' : 'none';
+}
+
+function saveDeadlineEdit(orderId) {
+  const o = orders.find(x => x.id === orderId);
+  if (!o) return;
+  const dateVal = document.getElementById('edit-deadline-date').value;
+  const hourVal = document.getElementById('edit-deadline-hour').value;
+  const minVal  = document.getElementById('edit-deadline-minute').value;
+  const newDeadline = dateVal ? `${dateVal}T${hourVal||'00'}:${minVal||'00'}` : '';
+
+  if (!o.originalDeadline) o.originalDeadline = o.deadline;
+  o.deadline = newDeadline;
+  saveOrders(orders);
+  render();
+  openDetail(orderId);
 }
 
 function closeDetail() {

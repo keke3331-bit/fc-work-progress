@@ -93,10 +93,20 @@
       <div class="modal-meta">
         <span id="detail-device"></span>
         <span>📅 納期：<strong id="detail-deadline" class=""></strong>
+          <button class="btn-edit-deadline" id="btn-edit-deadline" onclick="toggleDeadlineEdit()">✏️</button>
+          <span id="detail-original-deadline" class="original-deadline" style="display:none"></span>
           <label class="completion-label" id="completion-notify-wrap">
             <input type="checkbox" id="detail-completion-notify"> 完了連絡済み
           </label>
         </span>
+        <div id="deadline-edit-panel" style="display:none" class="deadline-edit-panel">
+          <input type="date" id="edit-deadline-date">
+          <select id="edit-deadline-hour"><option value="">時</option></select>
+          <span>:</span>
+          <select id="edit-deadline-minute"><option value="">分</option></select>
+          <button class="btn-primary btn-sm" id="btn-deadline-save">保存</button>
+          <button class="btn-secondary btn-sm" onclick="toggleDeadlineEdit()">キャンセル</button>
+        </div>
         <span>🕐 登録：<span id="detail-created"></span></span>
       </div>
     </div>
@@ -276,7 +286,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="js/firebase-config.js"></script>
-<script src="data/work_items.js?v=9"></script>
-<script src="js/main.js?v=9"></script>
+<script src="data/work_items.js?v=10"></script>
+<script src="js/main.js?v=10"></script>
 </body>
 </html>
