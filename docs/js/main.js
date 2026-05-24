@@ -524,7 +524,7 @@ function renderExtrasForForm(extras, item, idx) {
       return `<div class="media-type-section" style="margin-top:6px">
         <span class="extra-label" style="display:block;margin-bottom:4px">記憶媒体：</span>
         <div class="choice-group" style="display:inline-flex;gap:4px;flex-wrap:wrap">
-          ${['備品','持込','購入品','他'].map(opt =>
+          ${['備品','持込','購入品','直移行','他'].map(opt =>
             `<button type="button" class="choice-btn"
               data-media-type="${escAttr(opt)}" data-item="${idx}"
               onclick="formMediaTypeSelect(this,${idx})">${escHtml(opt)}</button>`
@@ -624,7 +624,7 @@ function renderExtrasForModal(extras, item, idx, orderId) {
       dataFullRendered = true;
       const mediaType = ev.mediaType || '';
       const backupNo  = ev.backupDeviceNo || '';
-      const mediaBtns = ['備品','持込','購入品','他'].map(opt =>
+      const mediaBtns = ['備品','持込','購入品','直移行','他'].map(opt =>
         `<button type="button" class="choice-btn${mediaType===opt?' selected':''}"
           onclick="updateMediaType('${orderId}',${idx},'${opt}')">${escHtml(opt)}</button>`
       ).join('');
