@@ -584,6 +584,22 @@ function renderExtrasForModal(extras, item, idx, orderId) {
           💾 バックアップ済み</label>
       </div>`;
     }
+    if (ex.type === 'data_full_check') {
+      return `<div class="extra-checks">
+        <label class="sub-check-label ${ev.dataExtracted ? 'sub-check-done' : ''}">
+          <input type="checkbox" ${ev.dataExtracted ? 'checked' : ''}
+            onchange="updateExtraVal('${orderId}',${idx},'dataExtracted',this.checked); checkDataFull('${orderId}',${idx})">
+          📤 データ抜き出し完了</label>
+        <label class="sub-check-label ${ev.dataRestored ? 'sub-check-done' : ''}">
+          <input type="checkbox" ${ev.dataRestored ? 'checked' : ''}
+            onchange="updateExtraVal('${orderId}',${idx},'dataRestored',this.checked); checkDataFull('${orderId}',${idx})">
+          📥 データ戻し完了</label>
+        <label class="sub-check-label ${ev.backupDone ? 'sub-check-done' : ''}">
+          <input type="checkbox" ${ev.backupDone ? 'checked' : ''}
+            onchange="updateExtraVal('${orderId}',${idx},'backupDone',this.checked); checkDataFull('${orderId}',${idx})">
+          💾 バックアップ完了</label>
+      </div>`;
+    }
     return '';
   }).join('');
 }
@@ -593,6 +609,15 @@ function checkDataTransfer(orderId, itemIdx) {
   if (!o || !o.checklist[itemIdx]) return;
   const ev = o.checklist[itemIdx].extraValues || {};
   if (ev.dataExtracted && ev.dataRestored) {
+    completeItem(orderId, itemIdx);
+  }
+}
+
+function checkDataFull(orderId, itemIdx) {
+  const o = orders.find(x => x.id === orderId);
+  if (!o || !o.checklist[itemIdx]) return;
+  const ev = o.checklist[itemIdx].extraValues || {};
+  if (ev.dataExtracted && ev.dataRestored && ev.backupDone) {
     completeItem(orderId, itemIdx);
   }
 }
@@ -787,7 +812,7 @@ function renderDetailForModal(detail, item, idx, orderId) {
         return `【<input type="text" class="choice-input" value="${escAttr(vals[i]||'')}" placeholder="入力"
           onchange="updateBlank('${orderId}',${idx},${i},this.value)">】`;
       });
-      // inline sub-checks for data_transfer / backup_check
+      // inline sub-checks for data_transfer / backup_check / data_full_check
       const ev = item.extraValues || {};
       let inlineExtras = '';
       (item.extras || []).forEach(ex => {
@@ -808,10 +833,24 @@ function renderDetailForModal(detail, item, idx, orderId) {
                 onchange="updateExtraVal('${orderId}',${idx},'backupDone',this.checked);if(this.checked)completeItem('${orderId}',${idx})">💾</label>
           </span>`;
         }
+        if (ex.type === 'data_full_check') {
+          inlineExtras += `<span class="inline-subcheck-wrap">
+            <label class="inline-subcheck-label${ev.dataExtracted?' sub-check-done':''}" title="データ抜き出し完了">
+              <input type="checkbox" ${ev.dataExtracted?'checked':''}
+                onchange="updateExtraVal('${orderId}',${idx},'dataExtracted',this.checked);checkDataFull('${orderId}',${idx})">📤</label>
+            <label class="inline-subcheck-label${ev.dataRestored?' sub-check-done':''}" title="データ戻し完了">
+              <input type="checkbox" ${ev.dataRestored?'checked':''}
+                onchange="updateExtraVal('${orderId}',${idx},'dataRestored',this.checked);checkDataFull('${orderId}',${idx})">📥</label>
+            <label class="inline-subcheck-label${ev.backupDone?' sub-check-done':''}" title="バックアップ完了">
+              <input type="checkbox" ${ev.backupDone?'checked':''}
+                onchange="updateExtraVal('${orderId}',${idx},'backupDone',this.checked);checkDataFull('${orderId}',${idx})">💾</label>
+          </span>`;
+        }
       });
       html = `<div class="checklist-detail">${processed}${inlineExtras}</div>`;
       // skip these types in renderExtrasForModal below
-      const remainingExtras = (item.extras||[]).filter(e => e.type !== 'data_transfer' && e.type !== 'backup_check');
+      const remainingExtras = (item.extras||[]).filter(e =>
+        e.type !== 'data_transfer' && e.type !== 'backup_check' && e.type !== 'data_full_check');
       return html + renderExtrasForModal(remainingExtras, item, idx, orderId);
     } else if (detail.includes(' / ')) {
       const hasMail = (item.extras||[]).some(e => e.type === 'mail_address');
@@ -1127,6 +1166,9 @@ function buildPrintHTML(o) {
         }
         if (ex.type === 'backup_check') {
           parts.push(`☐ バックアップ済み`);
+        }
+        if (ex.type === 'data_full_check') {
+          parts.push(`☐ データ抜き出し完了　☐ データ戻し完了　☐ バックアップ完了`);
         }
       });
     }
