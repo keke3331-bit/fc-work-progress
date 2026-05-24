@@ -565,6 +565,25 @@ tbody td { padding: 13px 16px; font-size: 14px; vertical-align: middle; }
 .inline-subcheck-label.sub-check-done { color: var(--success); font-weight: 700; border-color: var(--success); }
 .inline-subcheck-label input[type="checkbox"] { accent-color: var(--success); cursor: pointer; }
 
+.memo-edit-area {
+  width: 100%;
+  min-height: 60px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--bg2);
+  resize: vertical;
+  line-height: 1.5;
+  transition: border-color .15s;
+}
+.memo-edit-area:focus { outline: none; border-color: var(--primary); }
+
+.media-type-section { margin-top: 8px; }
+.media-type-section .extra-label { display: block; margin-bottom: 4px; }
+
 
 .extra-field {
   display: flex;

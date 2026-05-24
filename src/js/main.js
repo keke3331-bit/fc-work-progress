@@ -260,7 +260,9 @@ function openDetail(id) {
   if (notifyCb) {
     notifyCb.checked = o.completionNotified || false;
     notifyCb.onchange = () => {
-      o.completionNotified = notifyCb.checked;
+      const target = orders.find(x => x.id === id);
+      if (!target) return;
+      target.completionNotified = notifyCb.checked;
       saveOrders(orders);
       render();
     };
@@ -269,7 +271,18 @@ function openDetail(id) {
 
   document.getElementById('detail-staff').textContent     = o.staff     || '—';
   document.getElementById('detail-requester').textContent = o.requester || '—';
-  document.getElementById('detail-memo').textContent      = o.memo      || '—';
+  const memoEl = document.getElementById('detail-memo');
+  if (memoEl && document.activeElement !== memoEl) {
+    memoEl.value = o.memo || '';
+  }
+  if (memoEl) {
+    memoEl.oninput = () => {
+      const target = orders.find(x => x.id === id);
+      if (!target) return;
+      target.memo = memoEl.value;
+      saveOrders(orders);
+    };
+  }
 
   const memberTypeEl   = document.getElementById('detail-member-type');
   const memberNoItem   = document.getElementById('detail-member-no-item');
@@ -322,7 +335,9 @@ function openDetail(id) {
   const laneSel = document.getElementById('detail-lane-sel');
   laneSel.value = o.lane || '';
   laneSel.onchange = () => {
-    o.lane = laneSel.value;
+    const target = orders.find(x => x.id === id);
+    if (!target) return;
+    target.lane = laneSel.value;
     saveOrders(orders);
     render();
   };
@@ -467,6 +482,7 @@ document.querySelectorAll('.device-btn').forEach(btn => {
 // ─── Extras renderers ────────────────────────────────────────────────────────
 function renderExtrasForForm(extras, item, idx) {
   if (!extras || !extras.length) return '';
+  let dataFullRendered = false;
   return extras.map(ex => {
     if (ex.type === 'sign_check') {
       return `<div class="extra-checks">
@@ -496,6 +512,30 @@ function renderExtrasForForm(extras, item, idx) {
         <button type="button" class="btn-add-more" onclick="formAddItem(${idx})">＋ 追加</button>
       </div>`;
     }
+    if ((ex.type === 'data_full_check' || ex.type === 'data_transfer' || ex.type === 'backup_check') && selectedDevice !== 'スマホ') {
+      if (dataFullRendered) return '';
+      dataFullRendered = true;
+      return `<div class="media-type-section" style="margin-top:6px">
+        <span class="extra-label" style="display:block;margin-bottom:4px">記憶媒体：</span>
+        <div class="choice-group" style="display:inline-flex;gap:4px;flex-wrap:wrap">
+          ${['備品','持込','購入品','他'].map(opt =>
+            `<button type="button" class="choice-btn"
+              data-media-type="${escAttr(opt)}" data-item="${idx}"
+              onclick="formMediaTypeSelect(this,${idx})">${escHtml(opt)}</button>`
+          ).join('')}
+        </div>
+      </div>
+      <div id="backup-no-form-${idx}" style="display:none;margin-top:4px">
+        <span class="extra-label" style="display:block;margin-bottom:4px">備品No：</span>
+        <div class="choice-group" style="display:inline-flex;gap:4px;flex-wrap:wrap">
+          ${['No①','No②','No③','No④','No⑤','No⑥'].map(no =>
+            `<button type="button" class="choice-btn"
+              data-backup-no="${escAttr(no)}" data-item="${idx}"
+              onclick="formBackupNoSelect(this,${idx})">${no}</button>`
+          ).join('')}
+        </div>
+      </div>`;
+    }
     return '';
   }).join('');
 }
@@ -503,17 +543,18 @@ function renderExtrasForForm(extras, item, idx) {
 function renderExtrasForModal(extras, item, idx, orderId) {
   if (!extras || !extras.length) return '';
   const ev = item.extraValues || {};
+  let dataFullRendered = false;
   return extras.map(ex => {
     if (ex.type === 'sign_check') {
       return `<div class="extra-checks">
-        <label class="sub-check-label">
+        <label class="sub-check-label ${ev.signed ? 'sub-check-done' : ''}">
           <input type="checkbox" ${ev.signed?'checked':''}
             onchange="updateExtraVal('${orderId}',${idx},'signed',this.checked)">
-          サイン確認済み</label>
-        <label class="sub-check-label">
+          <span>✍️ サイン確認済み</span></label>
+        <label class="sub-check-label ${ev.staffChecked ? 'sub-check-done' : ''}">
           <input type="checkbox" ${ev.staffChecked?'checked':''}
             onchange="updateExtraVal('${orderId}',${idx},'staffChecked',this.checked)">
-          社員チェック済み</label>
+          <span>👤 社員チェック済み</span></label>
       </div>`;
     }
     if (ex.type === 'username_select') {
@@ -560,43 +601,96 @@ function renderExtrasForModal(extras, item, idx, orderId) {
           onclick="modalAddItem('${orderId}',${idx})">＋ 追加</button>
       </div>`;
     }
-    if (ex.type === 'data_transfer') {
+    if (ex.type === 'data_transfer' || ex.type === 'backup_check' || ex.type === 'data_full_check') {
+      if (dataFullRendered) return '';
+      dataFullRendered = true;
+      const mediaType = ev.mediaType || '';
+      const backupNo  = ev.backupDeviceNo || '';
+      const mediaBtns = ['備品','持込','購入品','他'].map(opt =>
+        `<button type="button" class="choice-btn${mediaType===opt?' selected':''}"
+          onclick="updateMediaType('${orderId}',${idx},'${opt}')">${escHtml(opt)}</button>`
+      ).join('');
+      const noBtns = mediaType === '備品'
+        ? `<div class="extra-field">
+            <span class="extra-label">備品No：</span>
+            ${['No①','No②','No③','No④','No⑤','No⑥'].map(no =>
+              `<button type="button" class="choice-btn${backupNo===no?' selected':''}"
+                onclick="updateBackupDevice('${orderId}',${idx},'${no}')">${no}</button>`
+            ).join('')}
+          </div>` : '';
       return `<div class="extra-checks">
         <label class="sub-check-label ${ev.dataExtracted ? 'sub-check-done' : ''}">
           <input type="checkbox" ${ev.dataExtracted ? 'checked' : ''}
-            onchange="updateExtraVal('${orderId}',${idx},'dataExtracted',this.checked); checkDataTransfer('${orderId}',${idx})">
-          📤 データ抜き出し完了</label>
+            onchange="updateExtraVal('${orderId}',${idx},'dataExtracted',this.checked)">
+          <span>📤 データ抜き出し完了</span></label>
         <label class="sub-check-label ${ev.dataRestored ? 'sub-check-done' : ''}">
           <input type="checkbox" ${ev.dataRestored ? 'checked' : ''}
-            onchange="updateExtraVal('${orderId}',${idx},'dataRestored',this.checked); checkDataTransfer('${orderId}',${idx})">
-          📥 データ戻し完了</label>
-      </div>`;
-    }
-    if (ex.type === 'backup_check') {
-      return `<div class="extra-checks">
+            onchange="updateExtraVal('${orderId}',${idx},'dataRestored',this.checked)">
+          <span>📥 データ戻し完了</span></label>
         <label class="sub-check-label ${ev.backupDone ? 'sub-check-done' : ''}">
           <input type="checkbox" ${ev.backupDone ? 'checked' : ''}
-            onchange="updateExtraVal('${orderId}',${idx},'backupDone',this.checked); if(this.checked) completeItem('${orderId}',${idx})">
-          💾 バックアップ済み</label>
-      </div>`;
+            onchange="updateExtraVal('${orderId}',${idx},'backupDone',this.checked)">
+          <span>💾 バックアップ完了</span></label>
+      </div>
+      <div class="media-type-section">
+        <span class="extra-label">記憶媒体：</span>
+        <div class="choice-group" style="display:inline-flex;gap:4px;flex-wrap:wrap">${mediaBtns}</div>
+      </div>
+      ${noBtns}`;
     }
     return '';
   }).join('');
 }
 
 function checkDataTransfer(orderId, itemIdx) {
+  // no auto-complete: user must press 完了 button manually
+}
+
+function checkDataFull(orderId, itemIdx) {
+  // no auto-complete: user must press 完了 button manually
+}
+
+function updateMediaType(orderId, itemIdx, type) {
   const o = orders.find(x => x.id === orderId);
   if (!o || !o.checklist[itemIdx]) return;
-  const ev = o.checklist[itemIdx].extraValues || {};
-  if (ev.dataExtracted && ev.dataRestored) {
-    completeItem(orderId, itemIdx);
-  }
+  if (!o.checklist[itemIdx].extraValues) o.checklist[itemIdx].extraValues = {};
+  o.checklist[itemIdx].extraValues.mediaType = type;
+  if (type !== '備品') delete o.checklist[itemIdx].extraValues.backupDeviceNo;
+  saveOrders(orders);
+  openDetail(orderId);
+}
+
+function updateBackupDevice(orderId, itemIdx, no) {
+  const o = orders.find(x => x.id === orderId);
+  if (!o || !o.checklist[itemIdx]) return;
+  if (!o.checklist[itemIdx].extraValues) o.checklist[itemIdx].extraValues = {};
+  o.checklist[itemIdx].extraValues.backupDeviceNo = no;
+  saveOrders(orders);
+  openDetail(orderId);
 }
 
 
 // ─── Extras event handlers ────────────────────────────────────────────────────
 function exclusiveSelectForm(btn, idx) {
-  document.querySelectorAll(`#form-checklist-wrap .choice-btn[data-item="${idx}"]:not([data-exclusive])`)
+  document.querySelectorAll(`#form-checklist-wrap .choice-btn[data-option][data-item="${idx}"]:not([data-exclusive])`)
+    .forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+
+function formMediaTypeSelect(btn, idx) {
+  document.querySelectorAll(`#form-checklist-wrap .choice-btn[data-media-type][data-item="${idx}"]`)
+    .forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  const noDiv = document.getElementById(`backup-no-form-${idx}`);
+  if (noDiv) noDiv.style.display = btn.dataset.mediaType === '備品' ? '' : 'none';
+  if (btn.dataset.mediaType !== '備品') {
+    document.querySelectorAll(`#form-checklist-wrap .choice-btn[data-backup-no][data-item="${idx}"]`)
+      .forEach(b => b.classList.remove('selected'));
+  }
+}
+
+function formBackupNoSelect(btn, idx) {
+  document.querySelectorAll(`#form-checklist-wrap .choice-btn[data-backup-no][data-item="${idx}"]`)
     .forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
 }
@@ -692,6 +786,7 @@ function updateExtraVal(orderId, itemIdx, key, value) {
   if (!o.checklist[itemIdx].extraValues) o.checklist[itemIdx].extraValues = {};
   o.checklist[itemIdx].extraValues[key] = value;
   saveOrders(orders);
+  openDetail(orderId);
 }
 
 function modalAddItem(orderId, itemIdx) {
@@ -783,32 +878,8 @@ function renderDetailForModal(detail, item, idx, orderId) {
         return `【<input type="text" class="choice-input" value="${escAttr(vals[i]||'')}" placeholder="入力"
           onchange="updateBlank('${orderId}',${idx},${i},this.value)">】`;
       });
-      // inline sub-checks for data_transfer / backup_check
-      const ev = item.extraValues || {};
-      let inlineExtras = '';
-      (item.extras || []).forEach(ex => {
-        if (ex.type === 'data_transfer') {
-          inlineExtras += `<span class="inline-subcheck-wrap">
-            <label class="inline-subcheck-label${ev.dataExtracted?' sub-check-done':''}" title="データ抜き出し完了">
-              <input type="checkbox" ${ev.dataExtracted?'checked':''}
-                onchange="updateExtraVal('${orderId}',${idx},'dataExtracted',this.checked);checkDataTransfer('${orderId}',${idx})">📤</label>
-            <label class="inline-subcheck-label${ev.dataRestored?' sub-check-done':''}" title="データ戻し完了">
-              <input type="checkbox" ${ev.dataRestored?'checked':''}
-                onchange="updateExtraVal('${orderId}',${idx},'dataRestored',this.checked);checkDataTransfer('${orderId}',${idx})">📥</label>
-          </span>`;
-        }
-        if (ex.type === 'backup_check') {
-          inlineExtras += `<span class="inline-subcheck-wrap">
-            <label class="inline-subcheck-label${ev.backupDone?' sub-check-done':''}" title="バックアップ済み">
-              <input type="checkbox" ${ev.backupDone?'checked':''}
-                onchange="updateExtraVal('${orderId}',${idx},'backupDone',this.checked);if(this.checked)completeItem('${orderId}',${idx})">💾</label>
-          </span>`;
-        }
-      });
-      html = `<div class="checklist-detail">${processed}${inlineExtras}</div>`;
-      // skip these types in renderExtrasForModal below
-      const remainingExtras = (item.extras||[]).filter(e => e.type !== 'data_transfer' && e.type !== 'backup_check');
-      return html + renderExtrasForModal(remainingExtras, item, idx, orderId);
+      html = `<div class="checklist-detail">${processed}</div>`;
+      return html + renderExtrasForModal(item.extras, item, idx, orderId);
     } else if (detail.includes(' / ')) {
       const hasMail = (item.extras||[]).some(e => e.type === 'mail_address');
       let onclick;
@@ -901,7 +972,7 @@ function submitNewOrder() {
     const cb = document.getElementById(`fci-${i}`);
     if (!cb || !cb.checked) return null;
     const selectedOptions = [...document.querySelectorAll(
-      `#form-checklist-wrap .choice-btn[data-item="${i}"].selected:not([data-exclusive])`)]
+      `#form-checklist-wrap .choice-btn[data-option][data-item="${i}"].selected:not([data-exclusive])`)]
       .map(btn => btn.dataset.option);
     const inputValues = [...document.querySelectorAll(
       `#form-checklist-wrap .choice-input[data-item="${i}"]:not([data-extra])`)]
@@ -930,6 +1001,12 @@ function submitNewOrder() {
       if (ex.type === 'add_more') {
         const inputs = document.querySelectorAll(`#form-checklist-wrap [data-extra="addItem"][data-item="${i}"]`);
         extraValues.addedItems = [...inputs].map(inp => inp.value).filter(v => v.trim());
+      }
+      if (ex.type === 'data_full_check') {
+        const mb = document.querySelector(`#form-checklist-wrap .choice-btn[data-media-type][data-item="${i}"].selected`);
+        if (mb) extraValues.mediaType = mb.dataset.mediaType;
+        const nb = document.querySelector(`#form-checklist-wrap .choice-btn[data-backup-no][data-item="${i}"].selected`);
+        if (nb) extraValues.backupDeviceNo = nb.dataset.backupNo;
       }
     });
     return { ...item, checked: false, selectedOptions, inputValues, extraValues };
@@ -1123,6 +1200,9 @@ function buildPrintHTML(o) {
         }
         if (ex.type === 'backup_check') {
           parts.push(`☐ バックアップ済み`);
+        }
+        if (ex.type === 'data_full_check') {
+          parts.push(`☐ データ抜き出し完了　☐ データ戻し完了　☐ バックアップ完了`);
         }
       });
     }
