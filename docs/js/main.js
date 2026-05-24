@@ -490,6 +490,12 @@ function renderExtrasForForm(extras, item, idx) {
         <label class="sub-check-label"><input type="checkbox" data-extra="staffChecked" data-item="${idx}"> 社員チェック済み</label>
       </div>`;
     }
+    if (ex.type === 'apple_id_check') {
+      return `<div class="extra-checks">
+        <label class="sub-check-label"><input type="checkbox" data-extra="appleIdConfirmed" data-item="${idx}"> 🍎 Apple ID 確認済み</label>
+        <label class="sub-check-label"><input type="checkbox" data-extra="faceToFace" data-item="${idx}"> 👤 面前対応</label>
+      </div>`;
+    }
     if (ex.type === 'username_select') {
       return `<div class="choice-group">
         ${['記述','MSアカウント表記名','owner'].map(opt =>
@@ -555,6 +561,18 @@ function renderExtrasForModal(extras, item, idx, orderId) {
           <input type="checkbox" ${ev.staffChecked?'checked':''}
             onchange="updateExtraVal('${orderId}',${idx},'staffChecked',this.checked)">
           <span>👤 社員チェック済み</span></label>
+      </div>`;
+    }
+    if (ex.type === 'apple_id_check') {
+      return `<div class="extra-checks">
+        <label class="sub-check-label ${ev.appleIdConfirmed ? 'sub-check-done' : ''}">
+          <input type="checkbox" ${ev.appleIdConfirmed?'checked':''}
+            onchange="updateExtraVal('${orderId}',${idx},'appleIdConfirmed',this.checked)">
+          <span>🍎 Apple ID 確認済み</span></label>
+        <label class="sub-check-label ${ev.faceToFace ? 'sub-check-done' : ''}">
+          <input type="checkbox" ${ev.faceToFace?'checked':''}
+            onchange="updateExtraVal('${orderId}',${idx},'faceToFace',this.checked)">
+          <span>👤 面前対応</span></label>
       </div>`;
     }
     if (ex.type === 'username_select') {
@@ -985,6 +1003,12 @@ function submitNewOrder() {
         if (s) extraValues.signed = s.checked;
         if (c) extraValues.staffChecked = c.checked;
       }
+      if (ex.type === 'apple_id_check') {
+        const a = document.querySelector(`#form-checklist-wrap [data-extra="appleIdConfirmed"][data-item="${i}"]`);
+        const f = document.querySelector(`#form-checklist-wrap [data-extra="faceToFace"][data-item="${i}"]`);
+        if (a) extraValues.appleIdConfirmed = a.checked;
+        if (f) extraValues.faceToFace = f.checked;
+      }
       if (ex.type === 'username_select') {
         const mb = document.querySelector(`#form-checklist-wrap .choice-btn[data-exclusive="uname${i}"].selected`);
         if (mb) extraValues.usernameMode = mb.dataset.option;
@@ -1182,6 +1206,9 @@ function buildPrintHTML(o) {
       (item.extras || []).forEach(ex => {
         if (ex.type === 'sign_check') {
           parts.push(`${ev.signed ? '☑' : '☐'} サイン確認　${ev.staffChecked ? '☑' : '☐'} 社員チェック`);
+        }
+        if (ex.type === 'apple_id_check') {
+          parts.push(`${ev.appleIdConfirmed ? '☑' : '☐'} Apple ID 確認済み　${ev.faceToFace ? '☑' : '☐'} 面前対応`);
         }
         if (ex.type === 'username_select' && ev.usernameMode) {
           const u = ev.usernameMode === '記述' ? `記述 (${ev.usernameText || ''})` : ev.usernameMode;
