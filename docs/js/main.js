@@ -260,7 +260,9 @@ function openDetail(id) {
   if (notifyCb) {
     notifyCb.checked = o.completionNotified || false;
     notifyCb.onchange = () => {
-      o.completionNotified = notifyCb.checked;
+      const target = orders.find(x => x.id === id);
+      if (!target) return;
+      target.completionNotified = notifyCb.checked;
       saveOrders(orders);
       render();
     };
@@ -322,7 +324,9 @@ function openDetail(id) {
   const laneSel = document.getElementById('detail-lane-sel');
   laneSel.value = o.lane || '';
   laneSel.onchange = () => {
-    o.lane = laneSel.value;
+    const target = orders.find(x => x.id === id);
+    if (!target) return;
+    target.lane = laneSel.value;
     saveOrders(orders);
     render();
   };
