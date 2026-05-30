@@ -1427,7 +1427,7 @@ thead th{background:#1a56db!important;color:#fff!important;-webkit-print-color-a
   <div class="ic"><div class="il">会員種別</div><div class="iv">${o.memberType || '—'}${o.memberNo ? ` (${o.memberNo})` : ''}</div></div>
   <div class="ic"><div class="il">納期</div><div class="iv">${formatDeadline(o.deadline)}</div></div>
   <div class="ic"><div class="il">作業者</div><div class="iv">${o.staff || '—'}</div></div>
-  <div class="ic"><div class="il">作業依頼者</div><div class="iv">${o.requester || '—'}</div></div>
+  <div class="ic"><div class="il">担当者</div><div class="iv">${o.requester || '—'}</div></div>
   <div class="ic"><div class="il">場所</div><div class="iv">${o.lane || '—'}</div></div>
   <div class="ic"><div class="il">完了連絡</div><div class="iv">${o.completionNotified ? '済み' : '未'}</div></div>
   ${o.memo ? `<div class="ic s4"><div class="il">メモ・備考</div><div class="iv" style="font-weight:normal;white-space:pre-wrap">${o.memo}</div></div>` : ''}
