@@ -16,6 +16,7 @@
     <a href="manual.html" target="_blank" class="btn-manual">📖 マニュアル</a>
   </div>
   <span class="sync-status" id="sync-status" title="Firebase同期状態">⚪ 未接続</span>
+  <button class="btn-new btn-repair-new" id="btn-repair-new" onclick="openRepairForm()">🔧 メーカー修理登録</button>
   <button class="btn-new" id="btn-new">＋ 新規作業登録</button>
 </header>
 
@@ -43,6 +44,10 @@
     <div class="stat-card stat-card--notify">
       <div class="stat-label">🔔 要連絡</div>
       <div class="stat-value warn" id="stat-notify">0</div>
+    </div>
+    <div class="stat-card stat-card--repair">
+      <div class="stat-label">🔧 メーカー修理中</div>
+      <div class="stat-value" id="stat-repair">0</div>
     </div>
   </div>
 
@@ -80,6 +85,34 @@
       <tbody id="order-tbody"></tbody>
     </table>
   </div>
+
+  <!-- ===== メーカー修理中 セクション ===== -->
+  <section class="repair-section">
+    <div class="repair-section-head">
+      <h2 class="repair-section-title">🔧 メーカー修理中
+        <span class="repair-section-badge" id="repair-section-count">0</span>
+      </h2>
+      <button class="filter-btn" id="btn-repair-toggle-done" onclick="toggleRepairShowDone()">📦 お渡し済みを表示</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>お客様名</th>
+            <th>メーカー / 機種</th>
+            <th>会員種別</th>
+            <th>担当者</th>
+            <th>修理種別</th>
+            <th>状態</th>
+            <th>見積もり金額</th>
+            <th>お渡し予定日</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="repair-tbody"></tbody>
+      </table>
+    </div>
+  </section>
 
 </main>
 
@@ -283,10 +316,108 @@
   </div>
 </div>
 
+<!-- ===== メーカー修理 登録・編集モーダル ===== -->
+<div class="overlay" id="overlay-repair">
+  <div class="modal form-modal">
+    <button class="modal-close" onclick="closeRepairForm()">✕</button>
+
+    <div class="modal-header">
+      <h2 id="repair-modal-title">メーカー修理登録</h2>
+    </div>
+
+    <div class="form-grid">
+      <div class="form-group full">
+        <label for="repair-customer">お客様名 <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="repair-customer" placeholder="お客様名を入力" autocomplete="off">
+        <span class="form-error" id="repair-customer-error">⚠ お客様名を入力してください</span>
+      </div>
+
+      <div class="form-group full">
+        <label>会員種別</label>
+        <div class="member-type-selector">
+          <button type="button" class="member-btn" data-type="一般/白" onclick="selectRepairMemberType(this)">一般 / 白</button>
+          <button type="button" class="member-btn" data-type="青" onclick="selectRepairMemberType(this)">青</button>
+          <button type="button" class="member-btn" data-type="SS等" onclick="selectRepairMemberType(this)">SS等</button>
+        </div>
+        <div id="repair-member-no-wrap" style="display:none; margin-top:8px">
+          <label style="font-size:13px;font-weight:700;display:block;margin-bottom:4px">会員番号</label>
+          <input type="text" id="repair-member-no" placeholder="会員番号を入力" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="repair-maker">メーカー</label>
+        <input type="text" id="repair-maker" placeholder="例：Apple / NEC / 富士通" autocomplete="off">
+      </div>
+
+      <div class="form-group">
+        <label for="repair-model">機種名</label>
+        <input type="text" id="repair-model" placeholder="例：MacBook Air M2" autocomplete="off">
+      </div>
+
+      <div class="form-group full">
+        <label for="repair-serial">シリアル番号</label>
+        <input type="text" id="repair-serial" placeholder="シリアル番号を入力" autocomplete="off">
+      </div>
+
+      <div class="form-group">
+        <label for="repair-requester">担当者</label>
+        <select id="repair-requester">
+          <option value="">選択してください</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="repair-status">状態</label>
+        <select id="repair-status"></select>
+      </div>
+
+      <div class="form-group full">
+        <label>修理種別</label>
+        <div class="member-type-selector">
+          <button type="button" class="member-btn repair-type-btn" data-type="通常修理" onclick="selectRepairType(this)">通常修理</button>
+          <button type="button" class="member-btn repair-type-btn" data-type="メーカー保証" onclick="selectRepairType(this)">メーカー保証</button>
+          <button type="button" class="member-btn repair-type-btn" data-type="延長保証" onclick="selectRepairType(this)">延長保証</button>
+          <button type="button" class="member-btn repair-type-btn" data-type="その他" onclick="selectRepairType(this)">その他</button>
+        </div>
+        <div id="repair-type-other-wrap" style="display:none; margin-top:8px">
+          <label style="font-size:13px;font-weight:700;display:block;margin-bottom:4px">その他（自由記述）</label>
+          <input type="text" id="repair-type-other" placeholder="修理種別を入力" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="repair-amount">見積もり金額（円）</label>
+        <div class="amount-input-wrap">
+          <input type="text" id="repair-amount" inputmode="numeric" placeholder="例：12000" autocomplete="off">
+          <span class="amount-unit">円</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="repair-handover">お渡し予定日</label>
+        <input type="date" id="repair-handover">
+      </div>
+
+      <div class="form-group full">
+        <label for="repair-memo">備考</label>
+        <textarea id="repair-memo" placeholder="症状・特記事項など"></textarea>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-danger" id="repair-delete-btn" onclick="deleteRepair()" style="margin-right:auto">🗑 削除</button>
+      <button class="btn-secondary" onclick="closeRepairForm()">キャンセル</button>
+      <button class="btn-primary" onclick="submitRepair()"><span id="repair-submit-label">✅ 登録する</span></button>
+    </div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="js/firebase-config.js"></script>
-<script src="data/work_items.js?v=10"></script>
-<script src="js/main.js?v=10"></script>
+<script src="data/work_items.js?v=12"></script>
+<script src="js/main.js?v=12"></script>
+<script src="js/maker_repair.js?v=12"></script>
 </body>
 </html>
