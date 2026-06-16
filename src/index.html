@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>FC 作業進捗管理ダッシュボード</title>
-  <link rel="stylesheet" href="css/style.css?v=17">
+  <link rel="stylesheet" href="css/style.css?v=18">
 </head>
 <body>
 
@@ -15,9 +15,11 @@
     <a href="display.html" target="_blank" class="btn-manual">📺 大型モニター表示</a>
     <a href="manual.html" target="_blank" class="btn-manual">📖 マニュアル</a>
   </div>
-  <span class="sync-status" id="sync-status" title="Firebase同期状態">⚪ 未接続</span>
-  <button class="btn-new btn-repair-new" id="btn-repair-new" onclick="openRepairForm()">🔧 メーカー修理登録</button>
-  <button class="btn-new" id="btn-new">＋ 新規作業登録</button>
+  <div class="header-actions">
+    <span class="sync-status" id="sync-status" title="Firebase同期状態">⚪ 未接続</span>
+    <button class="btn-new btn-repair-new" id="btn-repair-new" onclick="openRepairForm()">🔧 メーカー修理登録</button>
+    <button class="btn-new" id="btn-new">＋ 新規作業登録</button>
+  </div>
 </header>
 
 <!-- ===== MAIN ===== -->
@@ -417,8 +419,8 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="js/firebase-config.js"></script>
-<script src="data/work_items.js?v=17"></script>
-<script src="js/main.js?v=17"></script>
-<script src="js/maker_repair.js?v=17"></script>
+<script src="data/work_items.js?v=18"></script>
+<script src="js/main.js?v=18"></script>
+<script src="js/maker_repair.js?v=18"></script>
 </body>
 </html>

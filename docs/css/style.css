@@ -83,6 +83,13 @@ body {
 }
 .btn-new:hover { background: var(--primary-light); }
 
+/* ヘッダー右側のボタン群（メーカー修理登録・新規作業登録を隣接配置） */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 /* ===== MAIN ===== */
 .main { padding: 28px 24px; max-width: 1200px; margin: 0 auto; }
 
@@ -798,6 +805,11 @@ tbody td { padding: 13px 16px; font-size: 14px; vertical-align: middle; }
   .btn-manual { font-size: 11px; padding: 4px 8px; }
   /* 同期状態は非表示 */
   .sync-status { display: none; }
+  /* ボタン群を2段目に全幅で配置 */
+  .header-actions {
+    flex: 1 1 100%;
+    gap: 8px;
+  }
   /* 登録ボタンは2段目に並べて等幅・タップしやすく */
   .btn-new {
     font-size: 12px;

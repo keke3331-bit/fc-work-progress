@@ -499,17 +499,11 @@ function initRepairFirebase() {
   if (!firebase.apps || !firebase.apps.length) return; // main.js が初期化済みか確認
   try {
     repairsRef = firebase.database().ref('fc_maker_repairs');
-    let initialSync = true; // 初回スナップショットのみローカルデータを移行
+    // Firebase を正（source of truth）とする。リモートの内容をそのまま採用し、
+    // ローカルデータの自動再アップロードは行わない（行うと他端末での削除が復活するため）。
+    // localStorage はオフライン表示用のキャッシュとしてのみ使用する。
     repairsRef.on('value', snapshot => {
       const data = snapshot.val();
-      // 初回接続時、リモートが空でローカルにデータがあれば移行（1回限り）。
-      // 2回目以降の null は「他端末での全削除」なので尊重し、再アップロードしない。
-      if (initialSync && data === null && repairs.length > 0) {
-        initialSync = false;
-        repairsRef.set(repairs);
-        return;
-      }
-      initialSync = false;
       repairs = Array.isArray(data) ? data : [];
       localStorage.setItem(REPAIR_STORAGE_KEY, JSON.stringify(repairs));
       renderRepairs();
