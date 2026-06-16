@@ -106,6 +106,48 @@ function sanitizeAmount(str) {
   return String(str).replace(/[^0-9]/g, '');
 }
 
+// ─── 状態の進捗（どこまで完了したか）ヘルパー ─────────────────────────────────
+// statusStep = 完了した工程数（0〜9）。旧データ（status文字列のみ）からも算出。
+function getRepairStep(r) {
+  if (typeof r.statusStep === 'number') {
+    return Math.max(0, Math.min(REPAIR_STATUSES.length, r.statusStep));
+  }
+  const idx = REPAIR_STATUSES.indexOf(r.status);
+  return idx >= 0 ? idx + 1 : 0;
+}
+// レコードに進捗を反映（status文字列も同期）
+function applyRepairStep(r, step) {
+  step = Math.max(0, Math.min(REPAIR_STATUSES.length, step));
+  r.statusStep = step;
+  r.status = step > 0 ? REPAIR_STATUSES[step - 1] : '';
+}
+// ダッシュボード用：完了工程をセグメントで表示（クリックで変更可）
+function repairStepperHTML(r) {
+  const step = getRepairStep(r);
+  const total = REPAIR_STATUSES.length;
+  const segs = REPAIR_STATUSES.map((s, i) =>
+    `<button type="button" class="rep-seg${i < step ? ' done' : ''}" title="${escAttr((i + 1) + '. ' + s)}"
+      onclick="event.stopPropagation(); clickRepairStep('${r.id}', ${i})"></button>`
+  ).join('');
+  const label = step > 0 ? REPAIR_STATUSES[step - 1] : '未着手';
+  const done = step === total;
+  return `<div class="rep-stepper">
+    <div class="rep-seg-row">${segs}</div>
+    <div class="rep-step-label${done ? ' all-done' : ''}">${escHtml(label)}
+      <span class="rep-step-count">(${step}/${total})</span></div>
+  </div>`;
+}
+function clickRepairStep(id, i) {
+  const r = repairs.find(x => x.id === id);
+  if (!r) return;
+  const cur = getRepairStep(r);
+  // 最上段の完了工程をクリック → 1つ戻す。それ以外 → その工程まで完了に。
+  const target = (cur === i + 1) ? i : (i + 1);
+  applyRepairStep(r, target);
+  saveRepairs(repairs);
+  renderRepairs();
+}
+
 // ─── 統計・ダッシュボード描画 ────────────────────────────────────────────────
 function renderRepairStats() {
   const el = document.getElementById('stat-repair');
@@ -141,9 +183,6 @@ function renderRepairTable() {
   }
 
   tbody.innerHTML = list.map(r => {
-    const statusOpts = REPAIR_STATUSES.map(s =>
-      `<option value="${escAttr(s)}"${r.status === s ? ' selected' : ''}>${escHtml(s)}</option>`
-    ).join('');
     const hoCls = handoverClass(r.handoverDate, r.done);
     const doneCell = r.done
       ? `<button class="btn-repair-reopen" onclick="event.stopPropagation(); reopenRepair('${r.id}')">↩ 戻す</button>`
@@ -155,11 +194,7 @@ function renderRepairTable() {
       <td>${escHtml(repairMemberLabel(r))}</td>
       <td>${escHtml(r.requester || '—')}</td>
       <td>${repairTypeBadge(r)}</td>
-      <td onclick="event.stopPropagation()">
-        <select class="status-select repair-inline-status" onchange="updateRepairStatus('${r.id}', this.value)">
-          ${statusOpts}
-        </select>
-      </td>
+      <td onclick="event.stopPropagation()">${repairStepperHTML(r)}</td>
       <td class="repair-amount">${formatYen(r.estimateAmount)}</td>
       <td onclick="event.stopPropagation()">
         <input type="date" class="repair-inline-date ${hoCls}" value="${escAttr(r.handoverDate || '')}"
@@ -176,12 +211,6 @@ function renderRepairs() {
 }
 
 // ─── ダッシュボードからの直接変更 ─────────────────────────────────────────────
-function updateRepairStatus(id, value) {
-  const r = repairs.find(x => x.id === id);
-  if (!r) return;
-  r.status = value;
-  saveRepairs(repairs);
-}
 function updateRepairHandover(id, value) {
   const r = repairs.find(x => x.id === id);
   if (!r) return;
@@ -219,6 +248,7 @@ function toggleRepairShowDone() {
 
 // ─── 登録モーダル ─────────────────────────────────────────────────────────
 let repairEditingId = null; // null=新規, それ以外=編集
+let repairFormStep = 0;     // モーダル内の状態チェック（完了工程数）
 
 function selectRepairMemberType(btn) {
   document.querySelectorAll('#overlay-repair .member-btn').forEach(b => b.classList.remove('selected'));
@@ -236,10 +266,25 @@ function selectRepairType(btn) {
   if (!isOther) document.getElementById('repair-type-other').value = '';
 }
 
-function populateRepairStatusSelect() {
-  const sel = document.getElementById('repair-status');
-  if (!sel) return;
-  sel.innerHTML = REPAIR_STATUSES.map(s => `<option value="${escAttr(s)}">${escHtml(s)}</option>`).join('');
+// モーダル内：状態チェックリスト（完了した工程をチェック）
+function renderRepairStatusChecklist() {
+  const wrap = document.getElementById('repair-status-checklist');
+  if (!wrap) return;
+  const total = REPAIR_STATUSES.length;
+  wrap.innerHTML = REPAIR_STATUSES.map((s, i) => {
+    const done = i < repairFormStep;
+    return `<label class="rep-check${done ? ' done' : ''}">
+      <input type="checkbox" ${done ? 'checked' : ''} onchange="onRepairStatusCheck(${i}, this.checked)">
+      <span class="step-num">${i + 1}</span>
+      <span class="step-text">${escHtml(s)}</span>
+    </label>`;
+  }).join('') +
+  `<div class="rep-check-foot">完了：${repairFormStep}/${total} 工程</div>`;
+}
+function onRepairStatusCheck(i, checked) {
+  // チェック → その工程まで完了。チェック解除 → その工程の手前まで。
+  repairFormStep = checked ? i + 1 : i;
+  renderRepairStatusChecklist();
 }
 
 function populateMakerSelect() {
@@ -311,8 +356,8 @@ function openRepairForm() {
   document.querySelectorAll('#overlay-repair .repair-type-btn').forEach(b => b.classList.remove('selected'));
   document.getElementById('repair-type-other-wrap').style.display = 'none';
   document.getElementById('repair-type-other').value = '';
-  populateRepairStatusSelect();
-  document.getElementById('repair-status').value = REPAIR_STATUSES[0];
+  repairFormStep = 1; // 初期＝「伝票作成済み」まで完了
+  renderRepairStatusChecklist();
   document.getElementById('repair-amount').value = '';
   document.getElementById('repair-handover').value = '';
   document.getElementById('repair-memo').value = '';
@@ -349,8 +394,8 @@ function openRepairDetail(id) {
   document.getElementById('repair-type-other-wrap').style.display = isOther ? '' : 'none';
   document.getElementById('repair-type-other').value = r.repairTypeOther || '';
 
-  populateRepairStatusSelect();
-  document.getElementById('repair-status').value = r.status || REPAIR_STATUSES[0];
+  repairFormStep = getRepairStep(r);
+  renderRepairStatusChecklist();
   document.getElementById('repair-amount').value = (r.estimateAmount === '' || r.estimateAmount == null) ? '' : r.estimateAmount;
   document.getElementById('repair-handover').value = r.handoverDate || '';
   document.getElementById('repair-memo').value = r.memo || '';
@@ -385,7 +430,8 @@ function submitRepair() {
   const repairTypeOther = repairType === 'その他'
     ? document.getElementById('repair-type-other').value.trim() : '';
 
-  const status = document.getElementById('repair-status').value;
+  const statusStep = repairFormStep;
+  const status = statusStep > 0 ? REPAIR_STATUSES[statusStep - 1] : '';
   const estimateAmount = sanitizeAmount(document.getElementById('repair-amount').value);
   const handoverDate = document.getElementById('repair-handover').value;
   const memo = document.getElementById('repair-memo').value.trim();
@@ -396,7 +442,7 @@ function submitRepair() {
       Object.assign(r, {
         customerName: name, memberType, memberNo,
         maker, makerCode, model, serial, requester,
-        repairType, repairTypeOther, status,
+        repairType, repairTypeOther, status, statusStep,
         estimateAmount: estimateAmount === '' ? '' : Number(estimateAmount),
         handoverDate, memo,
       });
@@ -407,7 +453,7 @@ function submitRepair() {
       customerName: name,
       memberType, memberNo,
       maker, makerCode, model, serial, requester,
-      repairType, repairTypeOther, status,
+      repairType, repairTypeOther, status, statusStep,
       estimateAmount: estimateAmount === '' ? '' : Number(estimateAmount),
       handoverDate, memo,
       done: false,
@@ -470,7 +516,7 @@ function initRepairFirebase() {
 
 // ─── 起動 ─────────────────────────────────────────────────────────────────
 initRepairUI();
-populateRepairStatusSelect();
+renderRepairStatusChecklist();
 populateMakerSelect();
 initRepairFirebase();
 renderRepairs();
