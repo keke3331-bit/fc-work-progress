@@ -1464,14 +1464,18 @@ thead th{background:#1a56db!important;color:#fff!important;-webkit-print-color-a
     });
 
     // リアルタイム同期リスナー
+    let initialSync = true; // 初回スナップショットのみローカルデータを移行
     ordersRef.on('value', snapshot => {
       const data = snapshot.val();
 
-      if (data === null && orders.length > 0) {
-        // ローカルにデータがあれば Firebase へ移行
+      // 初回接続時、リモートが空でローカルにデータがあれば移行（1回限り）。
+      // 2回目以降の null は「他端末での全削除」なので尊重し、再アップロードしない。
+      if (initialSync && data === null && orders.length > 0) {
+        initialSync = false;
         ordersRef.set(orders);
         return;
       }
+      initialSync = false;
       orders = Array.isArray(data) ? data : [];
       localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
       render();
