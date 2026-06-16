@@ -247,7 +247,7 @@ function populateMakerSelect() {
   if (!sel) return;
   sel.innerHTML = '<option value="">選択してください</option>' +
     MAKERS.map(m => `<option value="${escAttr(m.name)}">${escHtml(m.name)}（${escHtml(m.code)}）</option>`).join('') +
-    `<option value="${MAKER_OTHER}">その他 ※入力</option>`;
+    `<option value="${MAKER_OTHER}">その他 入力</option>`;
 }
 
 function onRepairMakerChange() {
