@@ -779,24 +779,34 @@ tbody td { padding: 13px 16px; font-size: 14px; vertical-align: middle; }
 
 /* ===== RESPONSIVE ===== */
 @media (max-width: 700px) {
-  /* ── ヘッダー ── */
+  /* ── ヘッダー（2段組みで折り返し） ── */
   .header {
-    padding: 0 12px;
-    height: 52px;
+    padding: 8px 12px;
+    height: auto;
+    min-height: 52px;
     gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-start;
   }
-  /* タイトル文字を非表示にしてアイコン+マニュアルボタンだけ残す */
+  /* タイトル文字を非表示にしてアイコン+マニュアルボタンだけ残し、1段目を占有 */
   .header-title {
     font-size: 0;
     gap: 6px;
-    flex-shrink: 0;
+    flex: 1 1 100%;
   }
   .header-title > span { font-size: 20px; }
-  .btn-manual { font-size: 11px; padding: 3px 8px; }
+  .btn-manual { font-size: 11px; padding: 4px 8px; }
   /* 同期状態は非表示 */
   .sync-status { display: none; }
-  /* 新規登録ボタンをコンパクトに */
-  .btn-new { font-size: 12px; padding: 7px 10px; white-space: nowrap; }
+  /* 登録ボタンは2段目に並べて等幅・タップしやすく */
+  .btn-new {
+    font-size: 12px;
+    padding: 9px 8px;
+    white-space: nowrap;
+    flex: 1 1 0;
+    justify-content: center;
+    min-width: 0;
+  }
 
   /* ── メイン ── */
   .main { padding: 14px 10px; }
@@ -932,6 +942,20 @@ tbody td { padding: 13px 16px; font-size: 14px; vertical-align: middle; }
 @media (max-width: 768px) {
   .btn-repair-new { font-size: 12px; padding: 7px 10px; white-space: nowrap; }
   .repair-section-title { font-size: 16px; }
+}
+
+@media (max-width: 700px) {
+  /* 修理セクション見出し：タイトルと「お渡し済み表示」ボタンを2段で */
+  .repair-section { margin-top: 24px; }
+  .repair-section-head { gap: 8px; }
+  #btn-repair-toggle-done { font-size: 11px; padding: 7px 8px; }
+  /* 9列あるので横スクロール前提で各列の最低幅を確保し、潰れを防ぐ */
+  .repair-section table { min-width: 860px; }
+  .repair-inline-status { min-width: 130px; font-size: 12px; }
+  .repair-inline-date { font-size: 12px; padding: 6px; }
+  .btn-repair-done, .btn-repair-reopen { padding: 6px 10px; }
+  /* スクロール可能なことが分かるよう余白を付与 */
+  .repair-section .table-wrap { padding-bottom: 2px; }
 }
 
 /* メーカー / 機種 セル */
