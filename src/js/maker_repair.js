@@ -8,6 +8,17 @@
 // ─── 定数 ──────────────────────────────────────────────────────────────────
 const REPAIR_STORAGE_KEY = 'fc_maker_repairs';
 
+// メーカー（（）内はメーカー識別番号。選択肢には表示するがダッシュボードには出さない）
+const MAKERS = [
+  { name: '富士通', code: '95' },
+  { name: 'NEC', code: '26' },
+  { name: 'Lenovo', code: '38' },
+  { name: 'Canon', code: '39' },
+  { name: 'EPSON', code: '28' },
+  { name: 'Apple', code: '908' },
+];
+const MAKER_OTHER = '__other__';
+
 // 修理種別
 const REPAIR_TYPES = ['通常修理', 'メーカー保証', '延長保証', 'その他'];
 
@@ -231,6 +242,52 @@ function populateRepairStatusSelect() {
   sel.innerHTML = REPAIR_STATUSES.map(s => `<option value="${escAttr(s)}">${escHtml(s)}</option>`).join('');
 }
 
+function populateMakerSelect() {
+  const sel = document.getElementById('repair-maker');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">選択してください</option>' +
+    MAKERS.map(m => `<option value="${escAttr(m.name)}">${escHtml(m.name)}（${escHtml(m.code)}）</option>`).join('') +
+    `<option value="${MAKER_OTHER}">その他 ※入力</option>`;
+}
+
+function onRepairMakerChange() {
+  const sel = document.getElementById('repair-maker');
+  const other = document.getElementById('repair-maker-other');
+  if (!sel || !other) return;
+  const isOther = sel.value === MAKER_OTHER;
+  other.style.display = isOther ? '' : 'none';
+  if (!isOther) other.value = '';
+}
+
+// 編集時：保存済みメーカー名からプルダウン/自由入力欄を復元
+function setMakerFields(makerName) {
+  populateMakerSelect();
+  const sel = document.getElementById('repair-maker');
+  const other = document.getElementById('repair-maker-other');
+  if (!sel || !other) return;
+  const known = MAKERS.some(m => m.name === makerName);
+  if (makerName && !known) {
+    sel.value = MAKER_OTHER;
+    other.style.display = '';
+    other.value = makerName;
+  } else {
+    sel.value = makerName || '';
+    other.style.display = 'none';
+    other.value = '';
+  }
+}
+
+// 入力中のメーカー名・識別番号を取得
+function readMakerInput() {
+  const sel = document.getElementById('repair-maker');
+  if (!sel) return { maker: '', makerCode: '' };
+  if (sel.value === MAKER_OTHER) {
+    return { maker: document.getElementById('repair-maker-other').value.trim(), makerCode: '' };
+  }
+  const m = MAKERS.find(x => x.name === sel.value);
+  return { maker: sel.value, makerCode: m ? m.code : '' };
+}
+
 function populateRepairRequesterSelect() {
   const sel = document.getElementById('repair-requester');
   if (!sel || typeof STAFF === 'undefined') return;
@@ -246,7 +303,7 @@ function openRepairForm() {
   document.querySelectorAll('#overlay-repair .member-btn').forEach(b => b.classList.remove('selected'));
   document.getElementById('repair-member-no-wrap').style.display = 'none';
   document.getElementById('repair-member-no').value = '';
-  document.getElementById('repair-maker').value = '';
+  setMakerFields('');
   document.getElementById('repair-model').value = '';
   document.getElementById('repair-serial').value = '';
   populateRepairRequesterSelect();
@@ -278,7 +335,7 @@ function openRepairDetail(id) {
   const needsNo = ['青', 'SS等'].includes(r.memberType);
   document.getElementById('repair-member-no-wrap').style.display = needsNo ? '' : 'none';
   document.getElementById('repair-member-no').value = r.memberNo || '';
-  document.getElementById('repair-maker').value = r.maker || '';
+  setMakerFields(r.maker || '');
   document.getElementById('repair-model').value = r.model || '';
   document.getElementById('repair-serial').value = r.serial || '';
 
@@ -317,7 +374,7 @@ function submitRepair() {
   const memberNo = ['青', 'SS等'].includes(memberType)
     ? document.getElementById('repair-member-no').value.trim() : '';
 
-  const maker = document.getElementById('repair-maker').value.trim();
+  const { maker, makerCode } = readMakerInput();
   const model = document.getElementById('repair-model').value.trim();
   const serial = document.getElementById('repair-serial').value.trim();
 
@@ -338,7 +395,7 @@ function submitRepair() {
     if (r) {
       Object.assign(r, {
         customerName: name, memberType, memberNo,
-        maker, model, serial, requester,
+        maker, makerCode, model, serial, requester,
         repairType, repairTypeOther, status,
         estimateAmount: estimateAmount === '' ? '' : Number(estimateAmount),
         handoverDate, memo,
@@ -349,7 +406,7 @@ function submitRepair() {
       id: genId(),
       customerName: name,
       memberType, memberNo,
-      maker, model, serial, requester,
+      maker, makerCode, model, serial, requester,
       repairType, repairTypeOther, status,
       estimateAmount: estimateAmount === '' ? '' : Number(estimateAmount),
       handoverDate, memo,
@@ -414,5 +471,6 @@ function initRepairFirebase() {
 // ─── 起動 ─────────────────────────────────────────────────────────────────
 initRepairUI();
 populateRepairStatusSelect();
+populateMakerSelect();
 initRepairFirebase();
 renderRepairs();
