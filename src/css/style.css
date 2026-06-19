@@ -869,6 +869,15 @@ tbody td { padding: 13px 16px; font-size: 14px; vertical-align: middle; }
 }
 .btn-repair-new:hover { background: #ffedd5; }
 
+/* PC診断処方箋への外部リンク（メーカー修理登録の隣） */
+.btn-pc-diag {
+  background: #f0fdfa;
+  border: 1px solid #5eead4;
+  color: #0f766e;
+  text-decoration: none;
+}
+.btn-pc-diag:hover { background: #ccfbf1; }
+
 .stat-card--repair { border-top: 3px solid #ea580c; }
 .stat-card--repair .stat-value { color: #ea580c; }
 
