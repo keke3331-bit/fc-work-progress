@@ -3,6 +3,10 @@
 // ─── Storage ────────────────────────────────────────────────────────────────
 const STORAGE_KEY = 'fc_work_orders';
 let ordersRef = null;
+// PC診断処方箋（点検結果）連携
+const PC_DIAG_URL = 'https://keke3331-bit.github.io/pc-diagnosis/';
+let prescriptions = {};      // pc_prescriptions （id -> record）
+let currentDetailId = null;  // 詳細モーダルで開いている作業ID
 
 function loadOrders() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
@@ -250,6 +254,8 @@ document.querySelectorAll('.filter-btn[data-device]').forEach(btn => {
 function openDetail(id) {
   const o = orders.find(x => x.id === id);
   if (!o) return;
+  currentDetailId = id;
+  renderPrescriptionLink(o);
 
   document.getElementById('detail-name').textContent    = o.customerName + ' 様';
   document.getElementById('detail-device').innerHTML    = deviceBadge(o.device);
@@ -516,6 +522,102 @@ function saveDeadlineEdit(orderId) {
 
 function closeDetail() {
   document.getElementById('overlay-detail').classList.remove('open');
+  currentDetailId = null;
+}
+
+// ─── 点検結果（PC診断処方箋）連携 ───────────────────────────────────────────────
+function prescriptionLabel(rec) {
+  const name = (rec.name || '（無題）');
+  const date = (rec.date || (rec.updatedAt || '').slice(0,10) || '');
+  const member = rec.member ? '会員' + rec.member : '';
+  const tester = rec.tester ? '／点検者 ' + rec.tester : '';
+  return { name, sub: [member, date, tester].filter(Boolean).join('　') };
+}
+function renderPrescriptionLink(o) {
+  const box = document.getElementById('detail-prescription');
+  if (!box) return;
+  const rec = o.prescriptionId ? prescriptions[o.prescriptionId] : null;
+  if (o.prescriptionId && rec) {
+    const L = prescriptionLabel(rec);
+    box.innerHTML =
+      `<div class="rx-linked">
+        <div class="rx-info"><span class="rx-emoji">🩺</span>
+          <div><div class="rx-name">${escHtml(L.name)} 様</div>
+          <div class="rx-sub">${escHtml(L.sub)}</div></div>
+        </div>
+        <div class="rx-acts">
+          <button class="rx-open" onclick="openPrescription('${escAttr(o.prescriptionId)}')">点検結果を開く ↗</button>
+          <button class="rx-unlink" onclick="unlinkPrescription('${escAttr(o.id)}')">解除</button>
+        </div>
+      </div>`;
+  } else if (o.prescriptionId && !rec) {
+    box.innerHTML =
+      `<div class="rx-empty">⚠️ 紐づけた点検結果が見つかりません（削除された可能性）
+        <button class="rx-unlink" onclick="unlinkPrescription('${escAttr(o.id)}')">解除</button></div>`;
+  } else {
+    box.innerHTML =
+      `<button class="rx-link-btn" onclick="openPrescriptionPicker('${escAttr(o.id)}')">🩺 点検結果を紐づける</button>`;
+  }
+}
+function openPrescription(id) {
+  window.open(PC_DIAG_URL + '?id=' + encodeURIComponent(id), '_blank', 'noopener');
+}
+function unlinkPrescription(orderId) {
+  const o = orders.find(x => x.id === orderId);
+  if (!o) return;
+  o.prescriptionId = null;
+  saveOrders(orders);
+  renderPrescriptionLink(o);
+}
+function linkPrescription(orderId, recId) {
+  const o = orders.find(x => x.id === orderId);
+  if (!o) return;
+  o.prescriptionId = recId;
+  saveOrders(orders);
+  closePrescriptionPicker();
+  renderPrescriptionLink(o);
+}
+function closePrescriptionPicker() {
+  const m = document.getElementById('rx-picker');
+  if (m) m.remove();
+}
+function openPrescriptionPicker(orderId) {
+  closePrescriptionPicker();
+  const o = orders.find(x => x.id === orderId);
+  const wrap = document.createElement('div');
+  wrap.id = 'rx-picker';
+  wrap.className = 'rx-picker-overlay';
+  wrap.innerHTML =
+    `<div class="rx-picker-box">
+      <div class="rx-picker-head">点検結果を選択
+        <span class="rx-picker-x" onclick="closePrescriptionPicker()">×</span></div>
+      <input id="rx-picker-search" class="rx-picker-search" placeholder="お客様名・会員番号で検索">
+      <div id="rx-picker-list" class="rx-picker-list"></div>
+    </div>`;
+  document.body.appendChild(wrap);
+  wrap.addEventListener('click', e => { if (e.target === wrap) closePrescriptionPicker(); });
+  const search = document.getElementById('rx-picker-search');
+  // 会員番号があれば初期フィルタ（表記揺れの少ない確実なキー）。無ければ全件表示。
+  search.value = (o && o.memberNo) ? o.memberNo : '';
+  const renderRows = () => {
+    const q = (search.value || '').trim().toLowerCase();
+    const arr = Object.values(prescriptions)
+      .sort((a,b) => (b.updatedAt||'').localeCompare(a.updatedAt||''));
+    const f = arr.filter(r => !q ||
+      [r.name, r.member, r.tester, r.date].join(' ').toLowerCase().includes(q));
+    const list = document.getElementById('rx-picker-list');
+    if (!arr.length) { list.innerHTML = '<div class="rx-picker-empty">点検結果がまだありません</div>'; return; }
+    if (!f.length) { list.innerHTML = '<div class="rx-picker-empty">該当なし（検索条件を変えてください）</div>'; return; }
+    list.innerHTML = f.map(r => {
+      const L = prescriptionLabel(r);
+      return `<div class="rx-row" onclick="linkPrescription('${escAttr(orderId)}','${escAttr(r.id)}')">
+        <div class="rx-name">${escHtml(L.name)} 様</div>
+        <div class="rx-sub">${escHtml(L.sub)}</div></div>`;
+    }).join('');
+  };
+  search.addEventListener('input', renderRows);
+  renderRows();
+  search.focus();
 }
 document.getElementById('overlay-detail').addEventListener('click', e => {
   if (e.target === document.getElementById('overlay-detail')) closeDetail();
@@ -1472,6 +1574,15 @@ thead th{background:#1a56db!important;color:#fff!important;-webkit-print-color-a
       orders = Array.isArray(data) ? data : [];
       localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
       render();
+    });
+
+    // PC診断処方箋（点検結果）を読み込み、紐づけ表示に使う
+    db.ref('pc_prescriptions').on('value', snap => {
+      prescriptions = snap.val() || {};
+      if (currentDetailId) {
+        const o = orders.find(x => x.id === currentDetailId);
+        if (o) renderPrescriptionLink(o);
+      }
     });
   } catch(e) {
     console.warn('Firebase接続エラー（オフラインモード）:', e);
